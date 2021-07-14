@@ -1,0 +1,10 @@
+{
+    "reddit_access_token_url": "https://www.reddit.com/api/v1/access_token",
+    "reddit_grant_type_header": "https://oauth.reddit.com/grants/installed_client",
+    "reddit_device_id_header": "DO_NOT_TRACK_THIS_DEVICE",
+    "reddit_content_type_header": "application/x-www-form-urlencoded",
+    "reddit_api_endpoint": "https://oauth.reddit.com", 
+    "version": "v0.0.0",
+    "platform": "windows",
+    "application_name": "earthpullr"
+}

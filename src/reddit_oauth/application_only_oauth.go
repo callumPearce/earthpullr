@@ -2,6 +2,7 @@ package reddit_oauth
 
 import (
 	"context"
+	"earthpullr/src/config"
 	"earthpullr/src/secrets"
 	"encoding/json"
 	"fmt"
@@ -11,24 +12,14 @@ import (
 	"strings"
 )
 
-const (
-	REQUEST_URL  = "https://www.reddit.com/api/v1/access_token"
-	GRANT_TYPE   = "https://oauth.reddit.com/grants/installed_client"
-	DEVICE_ID    = "DO_NOT_TRACK_THIS_DEVICE"
-	CONTENT_TYPE = "application/x-www-form-urlencoded"
-	VERSION      = "v1.0.0"
-	PLATFORM     = "windows"
-	USER_AGENT   = PLATFORM + ":earthpullr:" + VERSION
-)
-
 type ApplicationOnlyOAuthRequest struct {
-	RequestURL     string
-	GrantType      string
-	DeviceID       string
-	ContentType    string
-	UserAgent      string
-	Client         *http.Client
-	SecretsManager secrets.SecretsManager
+	RequestURL        string
+	GrantType         string
+	DeviceID          string
+	ContentType       string
+	UserAgent         string
+	RedditAppClientID string
+	Client            *http.Client
 }
 
 func (oAuthRequest *ApplicationOnlyOAuthRequest) getPostRequestBody() string {
@@ -46,9 +37,9 @@ func (oAuthRequest *ApplicationOnlyOAuthRequest) getPostRequest() (*http.Request
 		oAuthRequest.RequestURL,
 		strings.NewReader(oAuthBody),
 	)
-	req.Header.Add("Content-Type", CONTENT_TYPE)
-	req.Header.Add("User-Agent", USER_AGENT)
-	req.SetBasicAuth(oAuthRequest.SecretsManager.GetSecret("reddit_app_client_id"), "")
+	req.Header.Add("Content-Type", oAuthRequest.ContentType)
+	req.Header.Add("User-Agent", oAuthRequest.UserAgent)
+	req.SetBasicAuth(oAuthRequest.RedditAppClientID, "")
 	return req, err
 }
 
@@ -87,15 +78,32 @@ func (oAuthRequest ApplicationOnlyOAuthRequest) NewOAuthToken() OAuthToken {
 	return oAuthToken
 }
 
-func NewApplicationOnlyOAuthRequest(secret_manager secrets.SecretsManager) ApplicationOnlyOAuthRequest {
-	appOnlyOAuthReq := ApplicationOnlyOAuthRequest{
-		RequestURL:     REQUEST_URL,
-		GrantType:      GRANT_TYPE,
-		DeviceID:       DEVICE_ID,
-		ContentType:    CONTENT_TYPE,
-		UserAgent:      USER_AGENT,
-		Client:         &http.Client{},
-		SecretsManager: secret_manager,
+func NewApplicationOnlyOAuthRequest(secretMan secrets.SecretsManager, configMan config.ConfigManager) (appOnlyOAuthReq ApplicationOnlyOAuthRequest, err error) {
+	errStrPrefix := "failed to create http request to retrieve application only oauth auth token: "
+	oauthConf, err := configMan.GetMultiConfig([]string{
+		"reddit_grant_type_header",
+		"reddit_access_token_url",
+		"reddit_device_id_header",
+		"reddit_content_type_header",
+		"platform",
+		"application_name",
+		"version",
+	})
+	if err != nil {
+		return appOnlyOAuthReq, fmt.Errorf(errStrPrefix+"%v", err)
 	}
-	return appOnlyOAuthReq
+	client_id, err := secretMan.GetSecret("reddit_app_client_id")
+	if err != nil {
+		return appOnlyOAuthReq, fmt.Errorf(errStrPrefix+"%v", err)
+	}
+	appOnlyOAuthReq = ApplicationOnlyOAuthRequest{
+		RequestURL:        oauthConf["reddit_access_token_url"],
+		GrantType:         oauthConf["reddit_grant_type_header"],
+		DeviceID:          oauthConf["reddit_device_id_header"],
+		ContentType:       oauthConf["reddit_content_type_header"],
+		UserAgent:         oauthConf["platform"] + ":" + oauthConf["application_name"] + ":" + oauthConf["version"],
+		RedditAppClientID: client_id,
+		Client:            &http.Client{},
+	}
+	return appOnlyOAuthReq, err
 }
