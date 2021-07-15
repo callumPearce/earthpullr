@@ -1,7 +1,7 @@
 package reddit_oauth
 
 type OAuthTokenRetriever interface {
-	NewOAuthToken() OAuthToken
+	NewOAuthToken() *OAuthToken
 }
 
 type OAuthToken struct {

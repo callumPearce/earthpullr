@@ -13,19 +13,17 @@ import (
 )
 
 type ApplicationOnlyOAuthRequest struct {
-	RequestURL        string
-	GrantType         string
-	DeviceID          string
-	ContentType       string
-	UserAgent         string
-	RedditAppClientID string
-	Client            *http.Client
+	request           *http.Request
+	redditAppClientID string
+	oauthConf         map[string]string
+	userAgent         string
+	client            *http.Client
 }
 
 func (oAuthRequest *ApplicationOnlyOAuthRequest) getPostRequestBody() string {
 	oAuthBody := url.Values{}
-	oAuthBody.Set("grant_type", oAuthRequest.GrantType)
-	oAuthBody.Set("device_id", oAuthRequest.DeviceID)
+	oAuthBody.Set("grant_type", oAuthRequest.oauthConf["reddit_grant_type_header"])
+	oAuthBody.Set("device_id", oAuthRequest.oauthConf["reddit_device_id_header"])
 	return oAuthBody.Encode()
 }
 
@@ -34,51 +32,58 @@ func (oAuthRequest *ApplicationOnlyOAuthRequest) getPostRequest() (*http.Request
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodPost,
-		oAuthRequest.RequestURL,
+		oAuthRequest.oauthConf["reddit_access_token_url"],
 		strings.NewReader(oAuthBody),
 	)
-	req.Header.Add("Content-Type", oAuthRequest.ContentType)
-	req.Header.Add("User-Agent", oAuthRequest.UserAgent)
-	req.SetBasicAuth(oAuthRequest.RedditAppClientID, "")
+	req.Header.Add("Content-Type", oAuthRequest.oauthConf["reddit_content_type_header"])
+	req.Header.Add("User-Agent", oAuthRequest.userAgent)
+	req.SetBasicAuth(oAuthRequest.redditAppClientID, "")
 	return req, err
 }
 
-func (oAuthRequest *ApplicationOnlyOAuthRequest) sendPostRequest(req *http.Request) (*http.Response, error) {
-	res, err := oAuthRequest.Client.Do(req)
+func (oAuthRequest *ApplicationOnlyOAuthRequest) doRequest() (*http.Response, error) {
+	res, err := oAuthRequest.client.Do(oAuthRequest.request)
 	return res, err
 }
 
 func (oAuthRequest *ApplicationOnlyOAuthRequest) extractResponse(response *http.Response) (oAuthToken OAuthToken, err error) {
 	defer response.Body.Close()
-	body, _ := ioutil.ReadAll(response.Body)
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		err = fmt.Errorf("failed to read oauth request response body: %v", err)
+		return oAuthToken, err
+	}
+
 	bodyStr := string(body)
 	oAuthToken = OAuthToken{}
-	json.Unmarshal([]byte(bodyStr), &oAuthToken)
+	err = json.Unmarshal([]byte(bodyStr), &oAuthToken)
+	if err != nil {
+		err = fmt.Errorf("failed to parse oauth request response body json: %v", err)
+		return oAuthToken, err
+	}
+
 	if response.StatusCode == http.StatusTooManyRequests {
-		panic(fmt.Sprintf("Rate Limited status: got %v", response.Status))
+		err = fmt.Errorf("rate limited status: got %v", response.Status)
 	} else if response.StatusCode != http.StatusOK {
-		panic(fmt.Sprintf("Error status: got %v", response.Status))
+		err = fmt.Errorf("error status: got %v", response.Status)
 	}
 	return oAuthToken, err
 }
 
-func (oAuthRequest ApplicationOnlyOAuthRequest) NewOAuthToken() OAuthToken {
-	req, err := oAuthRequest.getPostRequest()
+func (oAuthRequest ApplicationOnlyOAuthRequest) NewOAuthToken() (oAuthTokenPtr *OAuthToken, err error) {
+	res, err := oAuthRequest.doRequest()
 	if err != nil {
-		panic(err)
-	}
-	res, err := oAuthRequest.sendPostRequest(req)
-	if err != nil {
-		panic(err)
+		return oAuthTokenPtr, err
 	}
 	oAuthToken, err := oAuthRequest.extractResponse(res)
 	if err != nil {
 		panic(err)
 	}
-	return oAuthToken
+	oAuthTokenPtr = &oAuthToken
+	return &oAuthToken, err
 }
 
-func NewApplicationOnlyOAuthRequest(secretMan secrets.SecretsManager, configMan config.ConfigManager) (appOnlyOAuthReq ApplicationOnlyOAuthRequest, err error) {
+func NewApplicationOnlyOAuthRequest(client *http.Client, secretMan secrets.SecretsManager, configMan config.ConfigManager) (appOnlyOAuthReq ApplicationOnlyOAuthRequest, err error) {
 	errStrPrefix := "failed to create http request to retrieve application only oauth auth token: "
 	oauthConf, err := configMan.GetMultiConfig([]string{
 		"reddit_grant_type_header",
@@ -97,13 +102,17 @@ func NewApplicationOnlyOAuthRequest(secretMan secrets.SecretsManager, configMan 
 		return appOnlyOAuthReq, fmt.Errorf(errStrPrefix+"%v", err)
 	}
 	appOnlyOAuthReq = ApplicationOnlyOAuthRequest{
-		RequestURL:        oauthConf["reddit_access_token_url"],
-		GrantType:         oauthConf["reddit_grant_type_header"],
-		DeviceID:          oauthConf["reddit_device_id_header"],
-		ContentType:       oauthConf["reddit_content_type_header"],
-		UserAgent:         oauthConf["platform"] + ":" + oauthConf["application_name"] + ":" + oauthConf["version"],
-		RedditAppClientID: client_id,
-		Client:            &http.Client{},
+		oauthConf:         oauthConf,
+		userAgent:         oauthConf["platform"] + ":" + oauthConf["application_name"] + ":" + oauthConf["version"],
+		redditAppClientID: client_id,
+		client:            client,
 	}
+	req, err := appOnlyOAuthReq.getPostRequest()
+	if err != nil {
+		err = fmt.Errorf("failed to create an application only oauth request: %v", err)
+		return appOnlyOAuthReq, err
+	}
+	appOnlyOAuthReq.request = req
+
 	return appOnlyOAuthReq, err
 }
