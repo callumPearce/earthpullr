@@ -54,9 +54,10 @@ func getOAuthToken(client *http.Client, sm secrets.SecretsManager, cm config.Con
 
 func getListingResponse(oauthToken *reddit_oauth.OAuthToken, client *http.Client, cm config.ConfigManager) reddit_cli.ListingResponse {
 	listingParams := reddit_cli.ListingParameters{
-		Subreddit:        "earthporn",
-		ListingLimit:     1,
-		SeenListingCount: 0,
+		Subreddit:    "earthporn",
+		ListingLimit: 10,
+		SearchType:   "new",
+		Before:       "",
 	}
 	listingRequest, err := reddit_cli.NewListingRequest(
 		client,
@@ -82,6 +83,9 @@ func main() {
 	configMan := getConfigManager("config.json")
 	oauthToken := getOAuthToken(client, secretsMan, configMan)
 	listingResponse := getListingResponse(oauthToken, client, configMan)
-	imageURL := reddit_cli.GetImageURLFromListingResponse(listingResponse)
-	reddit_cli.SaveImageLocally(imageURL, oauthToken, client)
+	imagesRetriever, err := reddit_cli.NewImagesRetriever(listingResponse, oauthToken, client)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Failed retriever image batch: %v", err))
+	}
+	imagesRetriever.SaveImages("images")
 }

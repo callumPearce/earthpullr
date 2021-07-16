@@ -1,3 +1,5 @@
 secrets.json
 *.jpg
 *.exe
+images/
+.VSCodeCounter/

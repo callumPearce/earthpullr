@@ -6,19 +6,17 @@ import (
 	"earthpullr/src/reddit_oauth"
 	"encoding/json"
 	"fmt"
-	"html"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type ListingRequest struct {
-	ListingsParameters ListingParameters
+	listingsParameters ListingParameters
 	listingsConf       map[string]string
 	client             *http.Client
 	oAuthToken         *reddit_oauth.OAuthToken
@@ -26,9 +24,11 @@ type ListingRequest struct {
 }
 
 type ListingParameters struct {
-	Subreddit        string
-	ListingLimit     int
-	SeenListingCount int
+	Subreddit    string
+	ListingLimit int
+	SearchType   string
+	Before       string
+	After        string
 }
 
 type ListingResponse struct {
@@ -47,6 +47,7 @@ type listingChild struct {
 type listingChildData struct {
 	Title   string             `json:"title"`
 	Preview imagePreviewParent `json:"preview"`
+	Name    string             `json:"name"`
 }
 
 type imagePreviewParent struct {
@@ -95,7 +96,13 @@ func (lr *ListingRequest) setRequestHeaders(req *http.Request) {
 
 func (lr *ListingRequest) setRequestQueryParams(req *http.Request) {
 	q := req.URL.Query()
-	q.Add("limit", "1")
+	q.Add("limit", strconv.Itoa(lr.listingsParameters.ListingLimit))
+	if lr.listingsParameters.Before != "" {
+		q.Add("after", lr.listingsParameters.Before)
+	}
+	if lr.listingsParameters.After != "" {
+		q.Add("after", lr.listingsParameters.After)
+	}
 	req.URL.RawQuery = q.Encode()
 }
 
@@ -104,7 +111,7 @@ func (lr *ListingRequest) getRequest() (*http.Request, error) {
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodGet,
-		lr.listingsConf["reddit_api_endpoint"]+"/r/EarthPorn/hot",
+		lr.listingsConf["reddit_api_endpoint"]+"/r/"+lr.listingsParameters.Subreddit+"/"+lr.listingsParameters.SearchType,
 		strings.NewReader(body),
 	)
 	if err != nil {
@@ -156,6 +163,7 @@ func NewListingRequest(
 		log.Error("Failed to create listings request due to Config variables - %v", err)
 		return lr, err
 	}
+	lr.listingsParameters = listingParameters
 	lr.client = client
 	lr.oAuthToken = oAuthToken
 	req, err := lr.getRequest()
@@ -165,34 +173,4 @@ func NewListingRequest(
 		return lr, err
 	}
 	return lr, err
-}
-
-func GetImageURLFromListingResponse(lres ListingResponse) string {
-	url := lres.Data.Children[0].Data.Preview.ImagesList[0].Source.URL
-	return url
-}
-
-func SaveImageLocally(imageURL string, oAuthToken *reddit_oauth.OAuthToken, client *http.Client) {
-	// Download the image
-	body := url.Values{}
-	req, err := http.NewRequestWithContext(
-		context.Background(),
-		http.MethodGet,
-		html.UnescapeString(imageURL),
-		strings.NewReader(body.Encode()),
-	)
-	res, err := client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer res.Body.Close()
-	file, err := os.Create("test.jpg")
-	if err != nil {
-		log.Error("Could not create file test.png")
-	}
-	defer file.Close()
-	_, err = io.Copy(file, res.Body)
-	if err != nil {
-		log.Error("Could not read bytes into test.png")
-	}
 }
