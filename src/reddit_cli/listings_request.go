@@ -174,3 +174,48 @@ func NewListingRequest(
 	}
 	return lr, err
 }
+
+func NewListingParameters(subreddit string, listingLimit int, searchType string) (lr ListingParameters, err error) {
+	if listingLimit > 100 {
+		return lr, fmt.Errorf("listimingLimit exceeded: %d > 100", listingLimit)
+	}
+
+	searchTypes := []string{
+		"hot",
+		"new",
+		"random",
+		"rising",
+		"top",
+	}
+	found := false
+	for _, stype := range searchTypes {
+		if stype == searchType {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return lr, fmt.Errorf("unknown search type '%s'", searchType)
+	}
+
+	lr.ListingLimit = listingLimit
+	lr.SearchType = searchType
+	lr.Subreddit = subreddit
+	return lr, err
+}
+
+func (lr *ListingParameters) WithBefore(before string) error {
+	if lr.After != "" {
+		return fmt.Errorf("cannot set 'before', 'after' parameter has already been set for this group listings parameters")
+	}
+	lr.Before = before
+	return nil
+}
+
+func (lr *ListingParameters) WithAfter(after string) error {
+	if lr.Before != "" {
+		return fmt.Errorf("cannot set 'after', 'before' parameter has already been set for this group listings parameters")
+	}
+	lr.After = after
+	return nil
+}

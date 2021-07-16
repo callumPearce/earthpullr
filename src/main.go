@@ -53,11 +53,9 @@ func getOAuthToken(client *http.Client, sm secrets.SecretsManager, cm config.Con
 }
 
 func getListingResponse(oauthToken *reddit_oauth.OAuthToken, client *http.Client, cm config.ConfigManager) reddit_cli.ListingResponse {
-	listingParams := reddit_cli.ListingParameters{
-		Subreddit:    "earthporn",
-		ListingLimit: 10,
-		SearchType:   "new",
-		Before:       "",
+	listingParams, err := reddit_cli.NewListingParameters("EarthPorn", 10, "rising")
+	if err != nil {
+		log.Fatal("Failed to create listings search params: %v", err)
 	}
 	listingRequest, err := reddit_cli.NewListingRequest(
 		client,
