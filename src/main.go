@@ -85,5 +85,9 @@ func main() {
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Failed retriever image batch: %v", err))
 	}
+	err = imagesRetriever.WithTargetScreenResolution(1920, 1080)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Failed retriever image batch: %v", err))
+	}
 	imagesRetriever.SaveImages("images")
 }

@@ -13,7 +13,7 @@
 
 - Retry logic on HTTP requests
 - Detection if oauth token is invalid, in which case refresh it
-
+- Set to only collect images of correct resolution for current screen
 
 ### secrets
 
