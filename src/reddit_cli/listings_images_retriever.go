@@ -17,7 +17,7 @@ import (
 const MAX_RES = 7680 // 8K
 const ACCEPTABLE_ASPECT_DIFF = 0.25
 
-type ImagesRetriever struct {
+type ListingsImagesRetriever struct {
 	requests   map[imageData]*http.Request
 	oAuthToken *reddit_oauth.OAuthToken
 	client     *http.Client
@@ -49,7 +49,7 @@ func (image imageData) getImageName() (fileType string, err error) {
 	return image.UID + fileType, err
 }
 
-func (retriever ImagesRetriever) saveResponseToFile(filePath string, res *http.Response) error {
+func (retriever ListingsImagesRetriever) saveResponseToFile(filePath string, res *http.Response) error {
 	defer res.Body.Close()
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -63,9 +63,8 @@ func (retriever ImagesRetriever) saveResponseToFile(filePath string, res *http.R
 	return nil
 }
 
-func (retriever ImagesRetriever) imageFitsSpecifiedResolution(image imageData) (valid bool) {
+func (retriever ListingsImagesRetriever) imageAboveMinSize(image imageData) (valid bool) {
 	valid = true
-	// 1) Check that the resolution is not below the min on either dimension
 	if image.Width < retriever.width || image.Height < retriever.height {
 		valid = false
 		log.Info(fmt.Sprintf(
@@ -76,7 +75,11 @@ func (retriever ImagesRetriever) imageFitsSpecifiedResolution(image imageData) (
 			retriever.height,
 		))
 	}
-	// 2) Check the aspect ratio almost matches the screens resolution
+	return valid
+}
+
+func (retriever ListingsImagesRetriever) imageWithinAspectRatioRange(image imageData) (valid bool) {
+	valid = true
 	aspectRatio := (float64(image.Width) / float64(image.Height))
 	requiredRatio := (float64(retriever.width) / float64(retriever.height))
 	aspectDiff := aspectRatio - requiredRatio
@@ -95,7 +98,13 @@ func (retriever ImagesRetriever) imageFitsSpecifiedResolution(image imageData) (
 	return valid
 }
 
-func (retriever ImagesRetriever) SaveImages(directoryPath string) (err error) {
+func (retriever ListingsImagesRetriever) imageFitsSpecifiedResolution(image imageData) (valid bool) {
+	valid = retriever.imageAboveMinSize(image)
+	valid = valid && retriever.imageWithinAspectRatioRange(image)
+	return valid
+}
+
+func (retriever ListingsImagesRetriever) SaveImages(directoryPath string) (err error) {
 	for image, request := range retriever.requests {
 
 		if retriever.width > 0 && retriever.height > 0 && !retriever.imageFitsSpecifiedResolution(image) {
@@ -121,7 +130,7 @@ func (retriever ImagesRetriever) SaveImages(directoryPath string) (err error) {
 	return nil
 }
 
-func (retriever *ImagesRetriever) WithTargetScreenResolution(width int, height int) error {
+func (retriever *ListingsImagesRetriever) WithTargetScreenResolution(width int, height int) error {
 	if width <= 0 || width > MAX_RES || height <= 0 || height > MAX_RES {
 		return fmt.Errorf("resolution must be between (1, 1) to (%d, %d), got (%d, %d)", MAX_RES, MAX_RES, width, height)
 	}
@@ -130,7 +139,7 @@ func (retriever *ImagesRetriever) WithTargetScreenResolution(width int, height i
 	return nil
 }
 
-func NewImagesRetriever(lres ListingResponse, oAuthToken *reddit_oauth.OAuthToken, client *http.Client) (imagesRetriever ImagesRetriever, err error) {
+func NewImagesRetriever(lres ListingResponse, oAuthToken *reddit_oauth.OAuthToken, client *http.Client) (imagesRetriever ListingsImagesRetriever, err error) {
 	var images []imageData
 	for _, child := range lres.Data.Children {
 		image := imageData{

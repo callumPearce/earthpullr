@@ -6,5 +6,12 @@
     "reddit_api_endpoint": "https://oauth.reddit.com", 
     "version": "v0.0.0",
     "platform": "windows",
-    "application_name": "earthpullr"
+    "application_name": "earthpullr",
+    "subreddit": "earthporn",
+    "subreddit_search_type": "hot",
+    "width": 1920,
+    "height": 1080,
+    "query_batch_size": 10,
+    "max_aggregated_query_time_secs": 60,
+    "backgrounds_count": 10
 }
