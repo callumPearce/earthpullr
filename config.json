@@ -9,9 +9,9 @@
     "application_name": "earthpullr",
     "subreddit": "earthporn",
     "subreddit_search_type": "hot",
-    "width": 1920,
-    "height": 1080,
-    "query_batch_size": 10,
-    "max_aggregated_query_time_secs": 60,
-    "backgrounds_count": 10
+    "width": "1920",
+    "height": "1080",
+    "query_batch_size": "100",
+    "max_aggregated_query_time_secs": "30",
+    "backgrounds_count": "100"
 }

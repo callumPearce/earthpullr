@@ -9,26 +9,18 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type ListingRequest struct {
-	listingsParameters ListingParameters
-	listingsConf       map[string]string
-	client             *http.Client
-	oAuthToken         *reddit_oauth.OAuthToken
-	request            *http.Request
-}
-
-type ListingParameters struct {
-	Subreddit    string
-	ListingLimit int
-	SearchType   string
-	Before       string
-	After        string
+	listingsConf map[string]string
+	client       *http.Client
+	oAuthToken   *reddit_oauth.OAuthToken
+	request      *http.Request
+	before       string
+	after        string
 }
 
 type ListingResponse struct {
@@ -73,6 +65,9 @@ func (lr *ListingRequest) setListingsConfig(configMan config.ConfigManager) erro
 		"platform",
 		"application_name",
 		"version",
+		"subreddit",
+		"subreddit_search_type",
+		"query_batch_size",
 	})
 	if err != nil {
 		return err
@@ -96,12 +91,12 @@ func (lr *ListingRequest) setRequestHeaders(req *http.Request) {
 
 func (lr *ListingRequest) setRequestQueryParams(req *http.Request) {
 	q := req.URL.Query()
-	q.Add("limit", strconv.Itoa(lr.listingsParameters.ListingLimit))
-	if lr.listingsParameters.Before != "" {
-		q.Add("after", lr.listingsParameters.Before)
+	q.Add("limit", lr.listingsConf["query_batch_size"])
+	if lr.before != "" {
+		q.Add("after", lr.before)
 	}
-	if lr.listingsParameters.After != "" {
-		q.Add("after", lr.listingsParameters.After)
+	if lr.after != "" {
+		q.Add("after", lr.after)
 	}
 	req.URL.RawQuery = q.Encode()
 }
@@ -111,7 +106,7 @@ func (lr *ListingRequest) getRequest() (*http.Request, error) {
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodGet,
-		lr.listingsConf["reddit_api_endpoint"]+"/r/"+lr.listingsParameters.Subreddit+"/"+lr.listingsParameters.SearchType,
+		lr.listingsConf["reddit_api_endpoint"]+"/r/"+lr.listingsConf["subreddit"]+"/"+lr.listingsConf["subreddit_search_type"],
 		strings.NewReader(body),
 	)
 	if err != nil {
@@ -156,16 +151,18 @@ func NewListingRequest(
 	client *http.Client,
 	oAuthToken *reddit_oauth.OAuthToken,
 	confMan config.ConfigManager,
-	listingParameters ListingParameters,
+	before string,
+	after string,
 ) (lr ListingRequest, err error) {
 	err = lr.setListingsConfig(confMan)
 	if err != nil {
 		log.Error("Failed to create listings request due to Config variables - %v", err)
 		return lr, err
 	}
-	lr.listingsParameters = listingParameters
 	lr.client = client
 	lr.oAuthToken = oAuthToken
+	lr.before = before
+	lr.after = after
 	req, err := lr.getRequest()
 	lr.request = req
 	if err != nil {
@@ -173,49 +170,4 @@ func NewListingRequest(
 		return lr, err
 	}
 	return lr, err
-}
-
-func NewListingParameters(subreddit string, listingLimit int, searchType string) (lr ListingParameters, err error) {
-	if listingLimit > 100 {
-		return lr, fmt.Errorf("listimingLimit exceeded: %d > 100", listingLimit)
-	}
-
-	searchTypes := []string{
-		"hot",
-		"new",
-		"random",
-		"rising",
-		"top",
-	}
-	found := false
-	for _, stype := range searchTypes {
-		if stype == searchType {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return lr, fmt.Errorf("unknown search type '%s'", searchType)
-	}
-
-	lr.ListingLimit = listingLimit
-	lr.SearchType = searchType
-	lr.Subreddit = subreddit
-	return lr, err
-}
-
-func (lr *ListingParameters) WithBefore(before string) error {
-	if lr.After != "" {
-		return fmt.Errorf("cannot set 'before', 'after' parameter has already been set for this group listings parameters")
-	}
-	lr.Before = before
-	return nil
-}
-
-func (lr *ListingParameters) WithAfter(after string) error {
-	if lr.Before != "" {
-		return fmt.Errorf("cannot set 'after', 'before' parameter has already been set for this group listings parameters")
-	}
-	lr.After = after
-	return nil
 }

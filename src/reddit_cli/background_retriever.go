@@ -2,9 +2,14 @@ package reddit_cli
 
 import (
 	"earthpullr/src/config"
+	"earthpullr/src/reddit_oauth"
 	"earthpullr/src/secrets"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
 	"strconv"
+	"time"
 )
 
 type BackgroundRetriever struct {
@@ -12,11 +17,51 @@ type BackgroundRetriever struct {
 	secretsMan                 secrets.SecretsManager
 	width                      int
 	height                     int
-	subreddit                  string
-	subredditSearchType        string
-	queryBatchSize             int
 	maxAggregatedQueryTimeSecs int
 	backgroundsCount           int
+}
+
+func getOAuthToken(client *http.Client, sm secrets.SecretsManager, cm config.ConfigManager) *reddit_oauth.OAuthToken {
+	redditOauth, err := reddit_oauth.NewApplicationOnlyOAuthRequest(client, sm, cm)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Failed to retrieve oauth Token from reddit: %v", err))
+		os.Exit(1)
+	}
+	oauthToken, err := redditOauth.NewOAuthToken()
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Failed to retrieve oauth Token from reddit: %v", err))
+		os.Exit(1)
+	}
+	return oauthToken
+}
+
+func (br *BackgroundRetriever) GetBackgrounds() error {
+	client := &http.Client{Timeout: 10 * time.Second}
+	oauthToken := getOAuthToken(client, br.secretsMan, br.configMan)
+
+	listingRequest, err := NewListingRequest(
+		client,
+		oauthToken,
+		br.configMan,
+		"",
+		"",
+	)
+	if err != nil {
+		err = fmt.Errorf("failed to get Listings for EarthPorn subreddit: %v", err)
+		return err
+	}
+	listingResponse, err := listingRequest.DoRequest()
+	if err != nil {
+		err = fmt.Errorf("failed to get Listings for EarthPorn subreddit: %v", err)
+		return err
+	}
+	imagesRetriever, err := NewImagesRetriever(listingResponse, oauthToken, client, br.width, br.height)
+	if err != nil {
+		err = fmt.Errorf("failed retriever image batch: %v", err)
+		return err
+	}
+	imagesRetriever.SaveImages("images")
+	return nil
 }
 
 func NewBackgroundRetriever(cm config.ConfigManager, sm secrets.SecretsManager) (*BackgroundRetriever, error) {
@@ -42,11 +87,6 @@ func NewBackgroundRetriever(cm config.ConfigManager, sm secrets.SecretsManager) 
 		err = fmt.Errorf("failed to parse config variable to integer: %w", err)
 		return &BackgroundRetriever{}, err
 	}
-	queryBatchSize, err := strconv.Atoi(backgroundConf["query_batch_size"])
-	if err != nil {
-		err = fmt.Errorf("failed to parse config variable to integer: %w", err)
-		return &BackgroundRetriever{}, err
-	}
 	maxAggregatedQueryTimeSecs, err := strconv.Atoi(backgroundConf["max_aggregated_query_time_secs"])
 	if err != nil {
 		err = fmt.Errorf("failed to parse config variable to integer: %w", err)
@@ -60,11 +100,8 @@ func NewBackgroundRetriever(cm config.ConfigManager, sm secrets.SecretsManager) 
 	retriever := &BackgroundRetriever{
 		configMan:                  cm,
 		secretsMan:                 sm,
-		subreddit:                  backgroundConf["subreddit"],
-		subredditSearchType:        backgroundConf["subreddit_search_type"],
 		width:                      width,
 		height:                     height,
-		queryBatchSize:             queryBatchSize,
 		maxAggregatedQueryTimeSecs: maxAggregatedQueryTimeSecs,
 		backgroundsCount:           backgroundsCount,
 	}
