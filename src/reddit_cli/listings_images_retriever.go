@@ -18,10 +18,11 @@ const MAX_RES = 7680 // 8K
 const ACCEPTABLE_ASPECT_DIFF = 0.25
 
 type ListingsImagesRetriever struct {
-	requests   map[imageData]*http.Request
-	oAuthToken *reddit_oauth.OAuthToken
-	client     *http.Client
-	imageCount int
+	requests      map[imageData]*http.Request
+	oAuthToken    *reddit_oauth.OAuthToken
+	client        *http.Client
+	imageCount    int
+	finalImageUID string
 }
 
 type imageData struct {
@@ -87,7 +88,7 @@ func imageAboveMinSize(image imageData, width int, height int) (valid bool) {
 	valid = true
 	if image.Width < width || image.Height < height {
 		valid = false
-		log.Debug(fmt.Sprintf(
+		log.Info(fmt.Sprintf(
 			"Image with found with resolution (%d, %d) does not meet minimum (%d, %d)",
 			image.Width,
 			image.Height,
@@ -108,7 +109,7 @@ func imageWithinAspectRatioRange(image imageData, width int, height int) (valid 
 	}
 	if aspectDiff > float64(ACCEPTABLE_ASPECT_DIFF) {
 		valid = false
-		log.Debug(fmt.Sprintf(
+		log.Info(fmt.Sprintf(
 			"Image found with aspect ratio %f, required (+/-%f)%f",
 			aspectRatio,
 			float64(ACCEPTABLE_ASPECT_DIFF),
@@ -146,7 +147,7 @@ func NewImagesRetriever(lres ListingResponse, oAuthToken *reddit_oauth.OAuthToke
 		}
 	}
 	requests := map[imageData]*http.Request{}
-	for _, image := range images {
+	for i, image := range images {
 		req, err := http.NewRequestWithContext(
 			context.Background(),
 			http.MethodGet,
@@ -158,6 +159,9 @@ func NewImagesRetriever(lres ListingResponse, oAuthToken *reddit_oauth.OAuthToke
 			return imagesRetriever, err
 		}
 		requests[image] = req
+		if i == len(images)-1 {
+			imagesRetriever.finalImageUID = image.UID
+		}
 	}
 	imagesRetriever.requests = requests
 	imagesRetriever.oAuthToken = oAuthToken

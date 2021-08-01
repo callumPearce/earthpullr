@@ -7,11 +7,11 @@
     "version": "v0.0.0",
     "platform": "windows",
     "application_name": "earthpullr",
-    "subreddit": "earthporn",
-    "subreddit_search_type": "hot",
+    "subreddit": "earthporn",   
+    "subreddit_search_type": "new",
     "width": "1920",
     "height": "1080",
-    "query_batch_size": "100",
+    "query_batch_size": "10",
     "max_aggregated_query_time_secs": "30",
-    "backgrounds_count": "100"
+    "backgrounds_count": "10"
 }

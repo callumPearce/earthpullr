@@ -39,28 +39,35 @@ func (br *BackgroundRetriever) GetBackgrounds() error {
 	client := &http.Client{Timeout: 10 * time.Second}
 	oauthToken := getOAuthToken(client, br.secretsMan, br.configMan)
 
-	listingRequest, err := NewListingRequest(
-		client,
-		oauthToken,
-		br.configMan,
-		"",
-		"",
-	)
-	if err != nil {
-		err = fmt.Errorf("failed to get Listings for EarthPorn subreddit: %v", err)
-		return err
+	savedImages := 0
+	afterUID := ""
+
+	for savedImages < br.backgroundsCount {
+		listingRequest, err := NewListingRequest(
+			client,
+			oauthToken,
+			br.configMan,
+			"",
+			afterUID,
+		)
+		if err != nil {
+			err = fmt.Errorf("failed to get Listings for EarthPorn subreddit: %v", err)
+			return err
+		}
+		listingResponse, err := listingRequest.DoRequest()
+		if err != nil {
+			err = fmt.Errorf("failed to get Listings for EarthPorn subreddit: %v", err)
+			return err
+		}
+		imagesRetriever, err := NewImagesRetriever(listingResponse, oauthToken, client, br.width, br.height)
+		afterUID = imagesRetriever.finalImageUID
+		if err != nil {
+			err = fmt.Errorf("failed retriever image batch: %v", err)
+			return err
+		}
+		imagesRetriever.SaveImages("images")
+		savedImages += imagesRetriever.imageCount
 	}
-	listingResponse, err := listingRequest.DoRequest()
-	if err != nil {
-		err = fmt.Errorf("failed to get Listings for EarthPorn subreddit: %v", err)
-		return err
-	}
-	imagesRetriever, err := NewImagesRetriever(listingResponse, oauthToken, client, br.width, br.height)
-	if err != nil {
-		err = fmt.Errorf("failed retriever image batch: %v", err)
-		return err
-	}
-	imagesRetriever.SaveImages("images")
 	return nil
 }
 
