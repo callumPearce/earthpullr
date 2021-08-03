@@ -3,3 +3,5 @@ secrets.json
 *.exe
 images/
 .VSCodeCounter/
+.DS_Store
+main

@@ -88,7 +88,7 @@ func imageAboveMinSize(image imageData, width int, height int) (valid bool) {
 	valid = true
 	if image.Width < width || image.Height < height {
 		valid = false
-		log.Info(fmt.Sprintf(
+		log.Debug(fmt.Sprintf(
 			"Image with found with resolution (%d, %d) does not meet minimum (%d, %d)",
 			image.Width,
 			image.Height,
@@ -109,7 +109,7 @@ func imageWithinAspectRatioRange(image imageData, width int, height int) (valid 
 	}
 	if aspectDiff > float64(ACCEPTABLE_ASPECT_DIFF) {
 		valid = false
-		log.Info(fmt.Sprintf(
+		log.Debug(fmt.Sprintf(
 			"Image found with aspect ratio %f, required (+/-%f)%f",
 			aspectRatio,
 			float64(ACCEPTABLE_ASPECT_DIFF),
@@ -125,29 +125,35 @@ func imageFitsSpecifiedResolution(image imageData, width int, height int) (valid
 	return valid
 }
 
-func NewImagesRetriever(lres ListingResponse, oAuthToken *reddit_oauth.OAuthToken, client *http.Client, width int, height int) (imagesRetriever ListingsImagesRetriever, err error) {
+func NewImagesRetriever(lres ListingResponse, oAuthToken *reddit_oauth.OAuthToken, client *http.Client, maxImages int, width int, height int) (imagesRetriever ListingsImagesRetriever, err error) {
 	var images []imageData
 
 	if width <= 0 || width > MAX_RES || height <= 0 || height > MAX_RES {
 		return imagesRetriever, fmt.Errorf("resolution must be between (1, 1) to (%d, %d), got (%d, %d)", MAX_RES, MAX_RES, width, height)
 	}
 
+	imageCount := 0
 	for _, child := range lres.Data.Children {
+		if imageCount >= maxImages {
+			break
+		}
 		image := imageData{
 			UID:   child.Data.Name,
 			Title: child.Data.Title,
 		}
+		imagesRetriever.finalImageUID = image.UID
 		for _, imageObj := range child.Data.Preview.ImagesList {
 			image.URL = imageObj.Source.URL
 			image.Width = imageObj.Source.Width
 			image.Height = imageObj.Source.Height
 			if imageFitsSpecifiedResolution(image, width, height) {
 				images = append(images, image)
+				imageCount += 1
 			}
 		}
 	}
 	requests := map[imageData]*http.Request{}
-	for i, image := range images {
+	for _, image := range images {
 		req, err := http.NewRequestWithContext(
 			context.Background(),
 			http.MethodGet,
@@ -159,9 +165,6 @@ func NewImagesRetriever(lres ListingResponse, oAuthToken *reddit_oauth.OAuthToke
 			return imagesRetriever, err
 		}
 		requests[image] = req
-		if i == len(images)-1 {
-			imagesRetriever.finalImageUID = image.UID
-		}
 	}
 	imagesRetriever.requests = requests
 	imagesRetriever.oAuthToken = oAuthToken

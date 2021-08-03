@@ -5,11 +5,12 @@ import (
 	"earthpullr/src/reddit_oauth"
 	"earthpullr/src/secrets"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type BackgroundRetriever struct {
@@ -59,8 +60,10 @@ func (br *BackgroundRetriever) GetBackgrounds() error {
 			err = fmt.Errorf("failed to get Listings for EarthPorn subreddit: %v", err)
 			return err
 		}
-		imagesRetriever, err := NewImagesRetriever(listingResponse, oauthToken, client, br.width, br.height)
+		remainingImagesCount := br.backgroundsCount - savedImages
+		imagesRetriever, err := NewImagesRetriever(listingResponse, oauthToken, client, remainingImagesCount, br.width, br.height)
 		afterUID = imagesRetriever.finalImageUID
+		log.Info(afterUID)
 		if err != nil {
 			err = fmt.Errorf("failed retriever image batch: %v", err)
 			return err
