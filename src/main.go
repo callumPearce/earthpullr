@@ -7,6 +7,7 @@ import (
 	"earthpullr/src/secrets"
 	"fmt"
 	"os"
+	"context"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -38,9 +39,10 @@ func getConfigManager(jsonFilePath string) config.ConfigManager {
 func main() {
 	secretsMan := getSecretsManager("secrets.json")
 	configMan := getConfigManager("config.json")
+	ctx := context.Background()
 	retriever, err := reddit_cli.NewBackgroundRetriever(configMan, secretsMan)
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Failed to retrieve backgrounds from reddit: %v", err))
 	}
-	retriever.GetBackgrounds()
+	retriever.GetBackgrounds(ctx)
 }

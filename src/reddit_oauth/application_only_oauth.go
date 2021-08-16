@@ -12,6 +12,8 @@ import (
 	"strings"
 )
 
+const oAuthTokenKey int = 0
+
 type ApplicationOnlyOAuthRequest struct {
 	request           *http.Request
 	redditAppClientID string
@@ -27,10 +29,10 @@ func (oAuthRequest *ApplicationOnlyOAuthRequest) getPostRequestBody() string {
 	return oAuthBody.Encode()
 }
 
-func (oAuthRequest *ApplicationOnlyOAuthRequest) getPostRequest() (*http.Request, error) {
+func (oAuthRequest *ApplicationOnlyOAuthRequest) getPostRequest(ctx context.Context) (*http.Request, error) {
 	oAuthBody := oAuthRequest.getPostRequestBody()
 	req, err := http.NewRequestWithContext(
-		context.Background(),
+		ctx,
 		http.MethodPost,
 		oAuthRequest.oauthConf["reddit_access_token_url"],
 		strings.NewReader(oAuthBody),
@@ -77,13 +79,13 @@ func (oAuthRequest ApplicationOnlyOAuthRequest) NewOAuthToken() (oAuthTokenPtr *
 	}
 	oAuthToken, err := oAuthRequest.extractResponse(res)
 	if err != nil {
-		panic(err)
+		return oAuthTokenPtr, err
 	}
 	oAuthTokenPtr = &oAuthToken
 	return &oAuthToken, err
 }
 
-func NewApplicationOnlyOAuthRequest(client *http.Client, secretMan secrets.SecretsManager, configMan config.ConfigManager) (appOnlyOAuthReq ApplicationOnlyOAuthRequest, err error) {
+func NewApplicationOnlyOAuthRequest(ctx context.Context, client *http.Client, secretMan secrets.SecretsManager, configMan config.ConfigManager) (appOnlyOAuthReq ApplicationOnlyOAuthRequest, err error) {
 	errStrPrefix := "failed to create http request to retrieve application only oauth auth token: "
 	oauthConf, err := configMan.GetMultiConfig([]string{
 		"reddit_grant_type_header",
@@ -107,7 +109,7 @@ func NewApplicationOnlyOAuthRequest(client *http.Client, secretMan secrets.Secre
 		redditAppClientID: client_id,
 		client:            client,
 	}
-	req, err := appOnlyOAuthReq.getPostRequest()
+	req, err := appOnlyOAuthReq.getPostRequest(ctx)
 	if err != nil {
 		err = fmt.Errorf("failed to create an application only oauth request: %v", err)
 		return appOnlyOAuthReq, err
@@ -115,4 +117,20 @@ func NewApplicationOnlyOAuthRequest(client *http.Client, secretMan secrets.Secre
 	appOnlyOAuthReq.request = req
 
 	return appOnlyOAuthReq, err
+}
+
+
+func FromContext(ctx context.Context) (*OAuthToken, error) {
+	if ctx == nil {
+		return &OAuthToken{}, fmt.Errorf("Cannot retrieve OAuthToken from nil context")
+	}
+	oAuthToken, ok := ctx.Value(oAuthTokenKey).(*OAuthToken)
+	if !ok {
+		return &OAuthToken{}, fmt.Errorf("OAuthToken is not in the current context")
+	}
+	return oAuthToken, nil
+}
+
+func ToContext(ctx context.Context, token OAuthToken) context.Context {
+	return context.WithValue(ctx, oAuthTokenKey, token)
 }

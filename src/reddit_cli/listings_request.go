@@ -83,10 +83,15 @@ func (lr *ListingRequest) getRequestBody() string {
 	return body.Encode()
 }
 
-func (lr *ListingRequest) setRequestHeaders(req *http.Request) {
+func (lr *ListingRequest) setRequestHeaders(ctx context.Context, req *http.Request) error {
 	req.Header.Add("User-Agent", lr.listingsConf["platform"]+":"+lr.listingsConf["application_name"]+":"+lr.listingsConf["version"])
 	req.Header.Add("Content-Type", lr.listingsConf["reddit_content_type_header"])
-	req.Header.Add("Authorization", lr.oAuthToken.TokenType+" "+lr.oAuthToken.AccessToken)
+	oAuthToken, err := reddit_oauth.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Authorization", oAuthToken.TokenType+" "+oAuthToken.AccessToken)
+	return nil
 }
 
 func (lr *ListingRequest) setRequestQueryParams(req *http.Request) {
@@ -101,10 +106,10 @@ func (lr *ListingRequest) setRequestQueryParams(req *http.Request) {
 	req.URL.RawQuery = q.Encode()
 }
 
-func (lr *ListingRequest) getRequest() (*http.Request, error) {
+func (lr *ListingRequest) getRequest(ctx context.Context) (*http.Request, error) {
 	body := lr.getRequestBody()
 	req, err := http.NewRequestWithContext(
-		context.Background(),
+		ctx,
 		http.MethodGet,
 		lr.listingsConf["reddit_api_endpoint"]+"/r/"+lr.listingsConf["subreddit"]+"/"+lr.listingsConf["subreddit_search_type"],
 		strings.NewReader(body),
@@ -114,7 +119,7 @@ func (lr *ListingRequest) getRequest() (*http.Request, error) {
 		return req, err
 	}
 	lr.setRequestQueryParams(req)
-	lr.setRequestHeaders(req)
+	err = lr.setRequestHeaders(ctx, req)
 	return req, err
 }
 
@@ -148,8 +153,8 @@ func (lr ListingRequest) DoRequest() (lres ListingResponse, err error) {
 }
 
 func NewListingRequest(
+	ctx context.Context,
 	client *http.Client,
-	oAuthToken *reddit_oauth.OAuthToken,
 	confMan config.ConfigManager,
 	before string,
 	after string,
@@ -160,10 +165,9 @@ func NewListingRequest(
 		return lr, err
 	}
 	lr.client = client
-	lr.oAuthToken = oAuthToken
 	lr.before = before
 	lr.after = after
-	req, err := lr.getRequest()
+	req, err := lr.getRequest(ctx)
 	lr.request = req
 	if err != nil {
 		log.Error("Failed to create listings request - %v", err)

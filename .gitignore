@@ -5,3 +5,4 @@ images/
 .VSCodeCounter/
 .DS_Store
 main
+.idea/*

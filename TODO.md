@@ -1,12 +1,14 @@
 # TODO Items
 
 - Shared context for API requests needs to be developed
+- Integrate zap uber logger
 
 ### reddit_oauth
 
 - Save token locally and check if it is still valid when program restarts
 - Implement oauth token refresh query
 - Retry logic on HTTP request
+- Store token in context
 
 
 ### reddit_cli

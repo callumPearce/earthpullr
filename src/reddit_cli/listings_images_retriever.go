@@ -2,7 +2,6 @@ package reddit_cli
 
 import (
 	"context"
-	"earthpullr/src/reddit_oauth"
 	"fmt"
 	"html"
 	"io"
@@ -19,7 +18,6 @@ const ACCEPTABLE_ASPECT_DIFF = 0.25
 
 type ListingsImagesRetriever struct {
 	requests      map[imageData]*http.Request
-	oAuthToken    *reddit_oauth.OAuthToken
 	client        *http.Client
 	imageCount    int
 	finalImageUID string
@@ -125,7 +123,7 @@ func imageFitsSpecifiedResolution(image imageData, width int, height int) (valid
 	return valid
 }
 
-func NewImagesRetriever(lres ListingResponse, oAuthToken *reddit_oauth.OAuthToken, client *http.Client, maxImages int, width int, height int) (imagesRetriever ListingsImagesRetriever, err error) {
+func NewImagesRetriever(ctx context.Context, lres ListingResponse, client *http.Client, maxImages int, width int, height int) (imagesRetriever ListingsImagesRetriever, err error) {
 	var images []imageData
 
 	if width <= 0 || width > MAX_RES || height <= 0 || height > MAX_RES {
@@ -155,7 +153,7 @@ func NewImagesRetriever(lres ListingResponse, oAuthToken *reddit_oauth.OAuthToke
 	requests := map[imageData]*http.Request{}
 	for _, image := range images {
 		req, err := http.NewRequestWithContext(
-			context.Background(),
+			ctx,
 			http.MethodGet,
 			html.UnescapeString(image.URL),
 			nil,
@@ -167,7 +165,6 @@ func NewImagesRetriever(lres ListingResponse, oAuthToken *reddit_oauth.OAuthToke
 		requests[image] = req
 	}
 	imagesRetriever.requests = requests
-	imagesRetriever.oAuthToken = oAuthToken
 	imagesRetriever.client = client
 	imagesRetriever.imageCount = len(requests)
 	return imagesRetriever, err

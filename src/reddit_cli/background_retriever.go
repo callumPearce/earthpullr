@@ -1,6 +1,7 @@
 package reddit_cli
 
 import (
+	"context"
 	"earthpullr/src/config"
 	"earthpullr/src/reddit_oauth"
 	"earthpullr/src/secrets"
@@ -22,8 +23,8 @@ type BackgroundRetriever struct {
 	backgroundsCount           int
 }
 
-func getOAuthToken(client *http.Client, sm secrets.SecretsManager, cm config.ConfigManager) *reddit_oauth.OAuthToken {
-	redditOauth, err := reddit_oauth.NewApplicationOnlyOAuthRequest(client, sm, cm)
+func addOAuthTokenToCtx(ctx context.Context, client *http.Client, sm secrets.SecretsManager, cm config.ConfigManager) *reddit_oauth.OAuthToken {
+	redditOauth, err := reddit_oauth.NewApplicationOnlyOAuthRequest(ctx, client, sm, cm)
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Failed to retrieve oauth Token from reddit: %v", err))
 		os.Exit(1)
@@ -36,17 +37,16 @@ func getOAuthToken(client *http.Client, sm secrets.SecretsManager, cm config.Con
 	return oauthToken
 }
 
-func (br *BackgroundRetriever) GetBackgrounds() error {
+func (br *BackgroundRetriever) GetBackgrounds(ctx context.Context) error {
 	client := &http.Client{Timeout: 10 * time.Second}
-	oauthToken := getOAuthToken(client, br.secretsMan, br.configMan)
-
+	addOAuthTokenToCtx(ctx, client, br.secretsMan, br.configMan)
 	savedImages := 0
 	afterUID := ""
 
 	for savedImages < br.backgroundsCount {
 		listingRequest, err := NewListingRequest(
+			ctx,
 			client,
-			oauthToken,
 			br.configMan,
 			"",
 			afterUID,
@@ -61,7 +61,7 @@ func (br *BackgroundRetriever) GetBackgrounds() error {
 			return err
 		}
 		remainingImagesCount := br.backgroundsCount - savedImages
-		imagesRetriever, err := NewImagesRetriever(listingResponse, oauthToken, client, remainingImagesCount, br.width, br.height)
+		imagesRetriever, err := NewImagesRetriever(ctx, listingResponse, client, remainingImagesCount, br.width, br.height)
 		afterUID = imagesRetriever.finalImageUID
 		log.Info(afterUID)
 		if err != nil {
