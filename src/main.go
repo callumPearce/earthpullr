@@ -1,13 +1,13 @@
 package main
 
 import (
+	"context"
 	"earthpullr/src/config"
 	"earthpullr/src/file_readers"
 	"earthpullr/src/reddit_cli"
 	"earthpullr/src/secrets"
 	"fmt"
 	"os"
-	"context"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -44,5 +44,8 @@ func main() {
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Failed to retrieve backgrounds from reddit: %v", err))
 	}
-	retriever.GetBackgrounds(ctx)
+	err = retriever.GetBackgrounds(ctx)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("failed to retrieve backgrounds from reddit: %v", err))
+	}
 }

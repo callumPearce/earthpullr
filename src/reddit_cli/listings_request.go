@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type ListingRequest struct {
@@ -161,8 +159,7 @@ func NewListingRequest(
 ) (lr ListingRequest, err error) {
 	err = lr.setListingsConfig(confMan)
 	if err != nil {
-		log.Error("Failed to create listings request due to Config variables - %v", err)
-		return lr, err
+		return lr, fmt.Errorf("failed to create listings request due to Config variables - %v", err)
 	}
 	lr.client = client
 	lr.before = before
@@ -170,8 +167,7 @@ func NewListingRequest(
 	req, err := lr.getRequest(ctx)
 	lr.request = req
 	if err != nil {
-		log.Error("Failed to create listings request - %v", err)
-		return lr, err
+		return lr, fmt.Errorf("failed to create listings request - %v", err)
 	}
 	return lr, err
 }

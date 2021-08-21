@@ -122,15 +122,15 @@ func NewApplicationOnlyOAuthRequest(ctx context.Context, client *http.Client, se
 
 func FromContext(ctx context.Context) (*OAuthToken, error) {
 	if ctx == nil {
-		return &OAuthToken{}, fmt.Errorf("Cannot retrieve OAuthToken from nil context")
+		return &OAuthToken{}, fmt.Errorf("cannot retrieve OAuthToken from nil context")
 	}
 	oAuthToken, ok := ctx.Value(oAuthTokenKey).(*OAuthToken)
 	if !ok {
-		return &OAuthToken{}, fmt.Errorf("OAuthToken is not in the current context")
+		return &OAuthToken{}, fmt.Errorf("oauth token is not in the current context")
 	}
 	return oAuthToken, nil
 }
 
-func ToContext(ctx context.Context, token OAuthToken) context.Context {
+func ToContext(ctx context.Context, token *OAuthToken) context.Context {
 	return context.WithValue(ctx, oAuthTokenKey, token)
 }

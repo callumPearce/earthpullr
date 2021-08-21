@@ -7,7 +7,6 @@ import (
 	"earthpullr/src/secrets"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -23,23 +22,26 @@ type BackgroundRetriever struct {
 	backgroundsCount           int
 }
 
-func addOAuthTokenToCtx(ctx context.Context, client *http.Client, sm secrets.SecretsManager, cm config.ConfigManager) *reddit_oauth.OAuthToken {
+func addOAuthTokenToCtx(ctx context.Context, client *http.Client, sm secrets.SecretsManager, cm config.ConfigManager) (context.Context, error) {
 	redditOauth, err := reddit_oauth.NewApplicationOnlyOAuthRequest(ctx, client, sm, cm)
 	if err != nil {
-		log.Fatal(fmt.Sprintf("Failed to retrieve oauth Token from reddit: %v", err))
-		os.Exit(1)
+		return ctx, fmt.Errorf("failed to build request to retrieve oauth Token from reddit: %v", err)
 	}
 	oauthToken, err := redditOauth.NewOAuthToken()
 	if err != nil {
-		log.Fatal(fmt.Sprintf("Failed to retrieve oauth Token from reddit: %v", err))
-		os.Exit(1)
+		return ctx, fmt.Errorf("failed to retrieve oauth Token from reddit: %v", err)
 	}
-	return oauthToken
+	ctx = reddit_oauth.ToContext(ctx, oauthToken)
+	return ctx, nil
 }
 
 func (br *BackgroundRetriever) GetBackgrounds(ctx context.Context) error {
 	client := &http.Client{Timeout: 10 * time.Second}
-	addOAuthTokenToCtx(ctx, client, br.secretsMan, br.configMan)
+	ctx, err := addOAuthTokenToCtx(ctx, client, br.secretsMan, br.configMan)
+	log.Info(reddit_oauth.FromContext(ctx))
+	if err != nil {
+		fmt.Errorf("failed to get new backgrounds: %v", err)
+	}
 	savedImages := 0
 	afterUID := ""
 
@@ -52,13 +54,11 @@ func (br *BackgroundRetriever) GetBackgrounds(ctx context.Context) error {
 			afterUID,
 		)
 		if err != nil {
-			err = fmt.Errorf("failed to get Listings for EarthPorn subreddit: %v", err)
-			return err
+			return fmt.Errorf("failed to get Listings for subreddit: %v", err)
 		}
 		listingResponse, err := listingRequest.DoRequest()
 		if err != nil {
-			err = fmt.Errorf("failed to get Listings for EarthPorn subreddit: %v", err)
-			return err
+			return fmt.Errorf("failed to get Listings for subreddit: %v", err)
 		}
 		remainingImagesCount := br.backgroundsCount - savedImages
 		imagesRetriever, err := NewImagesRetriever(ctx, listingResponse, client, remainingImagesCount, br.width, br.height)
