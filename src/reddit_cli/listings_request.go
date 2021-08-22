@@ -150,7 +150,7 @@ func (lr ListingRequest) DoRequest() (lres ListingResponse, err error) {
 	return lres, err
 }
 
-func NewListingRequest(
+	func NewListingRequest(
 	ctx context.Context,
 	client *http.Client,
 	confMan config.ConfigManager,

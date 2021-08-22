@@ -3,20 +3,20 @@ package reddit_cli
 import (
 	"context"
 	"fmt"
+	"go.uber.org/zap"
 	"html"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const MAX_RES = 7680 // 8K
 const ACCEPTABLE_ASPECT_DIFF = 0.25
 
 type ListingsImagesRetriever struct {
+	logger 	      *zap.Logger
 	requests      map[imageData]*http.Request
 	client        *http.Client
 	imageCount    int
@@ -77,16 +77,16 @@ func (retriever ListingsImagesRetriever) SaveImages(directoryPath string) (err e
 		if err != nil {
 			return err
 		}
-		log.Info(fmt.Sprintf("Successfully saved image to '%s'", filePath))
+		retriever.logger.Info(fmt.Sprintf("Successfully saved image to '%s'", filePath))
 	}
 	return nil
 }
 
-func imageAboveMinSize(image imageData, width int, height int) (valid bool) {
+func imageAboveMinSize(logger *zap.Logger, image imageData, width int, height int) (valid bool) {
 	valid = true
 	if image.Width < width || image.Height < height {
 		valid = false
-		log.Debug(fmt.Sprintf(
+		logger.Debug(fmt.Sprintf(
 			"Image with found with resolution (%d, %d) does not meet minimum (%d, %d)",
 			image.Width,
 			image.Height,
@@ -97,7 +97,7 @@ func imageAboveMinSize(image imageData, width int, height int) (valid bool) {
 	return valid
 }
 
-func imageWithinAspectRatioRange(image imageData, width int, height int) (valid bool) {
+func imageWithinAspectRatioRange(logger *zap.Logger, image imageData, width int, height int) (valid bool) {
 	valid = true
 	aspectRatio := (float64(image.Width) / float64(image.Height))
 	requiredRatio := (float64(width) / float64(height))
@@ -107,7 +107,7 @@ func imageWithinAspectRatioRange(image imageData, width int, height int) (valid 
 	}
 	if aspectDiff > float64(ACCEPTABLE_ASPECT_DIFF) {
 		valid = false
-		log.Debug(fmt.Sprintf(
+		logger.Debug(fmt.Sprintf(
 			"Image found with aspect ratio %f, required (+/-%f)%f",
 			aspectRatio,
 			float64(ACCEPTABLE_ASPECT_DIFF),
@@ -117,13 +117,13 @@ func imageWithinAspectRatioRange(image imageData, width int, height int) (valid 
 	return valid
 }
 
-func imageFitsSpecifiedResolution(image imageData, width int, height int) (valid bool) {
-	valid = imageAboveMinSize(image, width, height)
-	valid = valid && imageWithinAspectRatioRange(image, width, height)
+func imageFitsSpecifiedResolution(logger *zap.Logger, image imageData, width int, height int) (valid bool) {
+	valid = imageAboveMinSize(logger, image, width, height)
+	valid = valid && imageWithinAspectRatioRange(logger, image, width, height)
 	return valid
 }
 
-func NewImagesRetriever(ctx context.Context, lres ListingResponse, client *http.Client, maxImages int, width int, height int) (imagesRetriever ListingsImagesRetriever, err error) {
+func NewImagesRetriever(logger *zap.Logger, ctx context.Context, lres ListingResponse, client *http.Client, maxImages int, width int, height int) (imagesRetriever ListingsImagesRetriever, err error) {
 	var images []imageData
 
 	if width <= 0 || width > MAX_RES || height <= 0 || height > MAX_RES {
@@ -144,7 +144,7 @@ func NewImagesRetriever(ctx context.Context, lres ListingResponse, client *http.
 			image.URL = imageObj.Source.URL
 			image.Width = imageObj.Source.Width
 			image.Height = imageObj.Source.Height
-			if imageFitsSpecifiedResolution(image, width, height) {
+			if imageFitsSpecifiedResolution(logger, image, width, height) {
 				images = append(images, image)
 				imageCount += 1
 			}
@@ -164,6 +164,7 @@ func NewImagesRetriever(ctx context.Context, lres ListingResponse, client *http.
 		}
 		requests[image] = req
 	}
+	imagesRetriever.logger = logger
 	imagesRetriever.requests = requests
 	imagesRetriever.client = client
 	imagesRetriever.imageCount = len(requests)

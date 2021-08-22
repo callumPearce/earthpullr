@@ -6,14 +6,14 @@ import (
 	"earthpullr/src/reddit_oauth"
 	"earthpullr/src/secrets"
 	"fmt"
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type BackgroundRetriever struct {
+	logger 					   *zap.Logger
 	configMan                  config.ConfigManager
 	secretsMan                 secrets.SecretsManager
 	width                      int
@@ -38,7 +38,6 @@ func addOAuthTokenToCtx(ctx context.Context, client *http.Client, sm secrets.Sec
 func (br *BackgroundRetriever) GetBackgrounds(ctx context.Context) error {
 	client := &http.Client{Timeout: 10 * time.Second}
 	ctx, err := addOAuthTokenToCtx(ctx, client, br.secretsMan, br.configMan)
-	log.Info(reddit_oauth.FromContext(ctx))
 	if err != nil {
 		fmt.Errorf("failed to get new backgrounds: %v", err)
 	}
@@ -61,11 +60,10 @@ func (br *BackgroundRetriever) GetBackgrounds(ctx context.Context) error {
 			return fmt.Errorf("failed to get Listings for subreddit: %v", err)
 		}
 		remainingImagesCount := br.backgroundsCount - savedImages
-		imagesRetriever, err := NewImagesRetriever(ctx, listingResponse, client, remainingImagesCount, br.width, br.height)
+		imagesRetriever, err := NewImagesRetriever(br.logger, ctx, listingResponse, client, remainingImagesCount, br.width, br.height)
 		afterUID = imagesRetriever.finalImageUID
-		log.Info(afterUID)
 		if err != nil {
-			err = fmt.Errorf("failed retriever image batch: %v", err)
+			err = fmt.Errorf("failed to retrieve image batch: %v", err)
 			return err
 		}
 		imagesRetriever.SaveImages("images")
@@ -74,7 +72,7 @@ func (br *BackgroundRetriever) GetBackgrounds(ctx context.Context) error {
 	return nil
 }
 
-func NewBackgroundRetriever(cm config.ConfigManager, sm secrets.SecretsManager) (*BackgroundRetriever, error) {
+func NewBackgroundRetriever(logger *zap.Logger, cm config.ConfigManager, sm secrets.SecretsManager) (*BackgroundRetriever, error) {
 	backgroundConf, err := cm.GetMultiConfig([]string{
 		"subreddit",
 		"subreddit_search_type",
@@ -108,6 +106,7 @@ func NewBackgroundRetriever(cm config.ConfigManager, sm secrets.SecretsManager) 
 		return &BackgroundRetriever{}, err
 	}
 	retriever := &BackgroundRetriever{
+		logger: 					logger,
 		configMan:                  cm,
 		secretsMan:                 sm,
 		width:                      width,
