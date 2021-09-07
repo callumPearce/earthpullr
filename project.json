@@ -1,0 +1,25 @@
+{
+ "name": "earthpullr",
+ "description": "Enter your project description",
+ "author": {
+  "name": "Callum",
+  "email": "callum_pearce@outlook.com"
+ },
+ "version": "0.1.0",
+ "binaryname": "earthpullr",
+ "frontend": {
+  "dir": "frontend",
+  "install": "npm install",
+  "build": "npm run build",
+  "bridge": "src",
+  "serve": "npm run serve"
+ },
+ "tags": "",
+ "WailsVersion": "",
+ "CrossCompile": false,
+ "Platform": "",
+ "Architecture": "",
+ "LdFlags": "",
+ "GoPath": "",
+ "UseFirebug": false
+}

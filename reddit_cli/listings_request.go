@@ -2,8 +2,8 @@ package reddit_cli
 
 import (
 	"context"
-	"earthpullr/src/config"
-	"earthpullr/src/reddit_oauth"
+	"earthpullr/config"
+	"earthpullr/reddit_oauth"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"

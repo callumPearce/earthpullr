@@ -2,9 +2,9 @@ package reddit_cli
 
 import (
 	"context"
-	"earthpullr/src/config"
-	"earthpullr/src/reddit_oauth"
-	"earthpullr/src/secrets"
+	"earthpullr/config"
+	"earthpullr/reddit_oauth"
+	"earthpullr/secrets"
 	"fmt"
 	"go.uber.org/zap"
 	"net/http"

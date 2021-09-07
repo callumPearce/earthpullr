@@ -1,6 +1,6 @@
 package config
 
-import "earthpullr/src/file_readers"
+import "earthpullr/file_readers"
 
 type ConfigManager interface {
 	GetConfig(key string) (string, error)

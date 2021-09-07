@@ -1,7 +1,7 @@
 package secrets
 
 import (
-	"earthpullr/src/file_readers"
+	"earthpullr/file_readers"
 )
 
 type SecretsManager interface {
