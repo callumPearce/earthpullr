@@ -2,9 +2,9 @@ package reddit_cli
 
 import (
 	"context"
-	"earthpullr/config"
-	"earthpullr/reddit_oauth"
-	"earthpullr/secrets"
+	"earthpullr/internal/reddit_oauth"
+	"earthpullr/internal/secrets"
+	"earthpullr/pkg/config"
 	"fmt"
 	"go.uber.org/zap"
 	"net/http"
@@ -13,10 +13,10 @@ import (
 )
 
 type BackgroundRetriever struct {
-	logger 					   *zap.Logger
-	configMan                  config.ConfigManager
-	secretsMan                 secrets.SecretsManager
-	width                      int
+	logger     *zap.Logger
+	configMan  config.ConfigManager
+	secretsMan secrets.SecretsManager
+	width      int
 	height                     int
 	maxAggregatedQueryTimeSecs int
 	backgroundsCount           int

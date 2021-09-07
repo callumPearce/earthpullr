@@ -2,8 +2,8 @@ package reddit_cli
 
 import (
 	"context"
-	"earthpullr/config"
-	"earthpullr/reddit_oauth"
+	reddit_oauth2 "earthpullr/internal/reddit_oauth"
+	"earthpullr/pkg/config"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -15,7 +15,7 @@ import (
 type ListingRequest struct {
 	listingsConf map[string]string
 	client       *http.Client
-	oAuthToken   *reddit_oauth.OAuthToken
+	oAuthToken   *reddit_oauth2.OAuthToken
 	request      *http.Request
 	before       string
 	after        string
@@ -84,7 +84,7 @@ func (lr *ListingRequest) getRequestBody() string {
 func (lr *ListingRequest) setRequestHeaders(ctx context.Context, req *http.Request) error {
 	req.Header.Add("User-Agent", lr.listingsConf["platform"]+":"+lr.listingsConf["application_name"]+":"+lr.listingsConf["version"])
 	req.Header.Add("Content-Type", lr.listingsConf["reddit_content_type_header"])
-	oAuthToken, err := reddit_oauth.FromContext(ctx)
+	oAuthToken, err := reddit_oauth2.FromContext(ctx)
 	if err != nil {
 		return err
 	}
