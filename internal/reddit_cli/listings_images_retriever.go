@@ -3,6 +3,7 @@ package reddit_cli
 import (
 	"context"
 	"fmt"
+	"github.com/wailsapp/wails"
 	"go.uber.org/zap"
 	"html"
 	"io"
@@ -61,7 +62,7 @@ func (retriever ListingsImagesRetriever) saveResponseToFile(filePath string, res
 	return nil
 }
 
-func (retriever ListingsImagesRetriever) SaveImages(directoryPath string) (err error) {
+func (retriever ListingsImagesRetriever) SaveImages(directoryPath string, runtime *wails.Runtime) (err error) {
 	for image, request := range retriever.requests {
 		fileName, err := image.getImageName()
 		if err != nil {
@@ -78,6 +79,7 @@ func (retriever ListingsImagesRetriever) SaveImages(directoryPath string) (err e
 			return err
 		}
 		retriever.logger.Info(fmt.Sprintf("Successfully saved image to '%s'", filePath))
+		runtime.Events.Emit("image_saved", 1)
 	}
 	return nil
 }

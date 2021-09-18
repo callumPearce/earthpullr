@@ -6,6 +6,7 @@ import (
 	"earthpullr/internal/secrets"
 	"earthpullr/pkg/config"
 	"fmt"
+	"github.com/wailsapp/wails"
 	"go.uber.org/zap"
 	"net/http"
 	"strconv"
@@ -20,6 +21,8 @@ type BackgroundRetriever struct {
 	height                     int
 	maxAggregatedQueryTimeSecs int
 	backgroundsCount           int
+	runtime *wails.Runtime
+	ctx context.Context
 }
 
 func addOAuthTokenToCtx(ctx context.Context, client *http.Client, sm secrets.SecretsManager, cm config.ConfigManager) (context.Context, error) {
@@ -35,9 +38,14 @@ func addOAuthTokenToCtx(ctx context.Context, client *http.Client, sm secrets.Sec
 	return ctx, nil
 }
 
-func (br *BackgroundRetriever) GetBackgrounds(ctx context.Context) error {
+func (br *BackgroundRetriever) WailsInit(runtime *wails.Runtime) error {
+	br.runtime = runtime
+	return nil
+}
+
+	func (br *BackgroundRetriever) GetBackgrounds() (string, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
-	ctx, err := addOAuthTokenToCtx(ctx, client, br.secretsMan, br.configMan)
+	ctx, err := addOAuthTokenToCtx(br.ctx, client, br.secretsMan, br.configMan)
 	if err != nil {
 		fmt.Errorf("failed to get new backgrounds: %v", err)
 	}
@@ -53,26 +61,26 @@ func (br *BackgroundRetriever) GetBackgrounds(ctx context.Context) error {
 			afterUID,
 		)
 		if err != nil {
-			return fmt.Errorf("failed to get Listings for subreddit: %v", err)
+			return "", fmt.Errorf("failed to get Listings for subreddit: %v", err)
 		}
 		listingResponse, err := listingRequest.DoRequest()
 		if err != nil {
-			return fmt.Errorf("failed to get Listings for subreddit: %v", err)
+			return "", fmt.Errorf("failed to get Listings for subreddit: %v", err)
 		}
 		remainingImagesCount := br.backgroundsCount - savedImages
 		imagesRetriever, err := NewImagesRetriever(br.logger, ctx, listingResponse, client, remainingImagesCount, br.width, br.height)
 		afterUID = imagesRetriever.finalImageUID
 		if err != nil {
 			err = fmt.Errorf("failed to retrieve image batch: %v", err)
-			return err
+			return "", err
 		}
-		imagesRetriever.SaveImages("images")
+		imagesRetriever.SaveImages("images", br.runtime)
 		savedImages += imagesRetriever.imageCount
 	}
-	return nil
+	return "Success", nil
 }
 
-func NewBackgroundRetriever(logger *zap.Logger, cm config.ConfigManager, sm secrets.SecretsManager) (*BackgroundRetriever, error) {
+func NewBackgroundRetriever(ctx context.Context, logger *zap.Logger, cm config.ConfigManager, sm secrets.SecretsManager) (*BackgroundRetriever, error) {
 	backgroundConf, err := cm.GetMultiConfig([]string{
 		"subreddit",
 		"subreddit_search_type",
@@ -113,6 +121,7 @@ func NewBackgroundRetriever(logger *zap.Logger, cm config.ConfigManager, sm secr
 		height:                     height,
 		maxAggregatedQueryTimeSecs: maxAggregatedQueryTimeSecs,
 		backgroundsCount:           backgroundsCount,
+		ctx:					 	ctx,
 	}
 	return retriever, nil
 }
