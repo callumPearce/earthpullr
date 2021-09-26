@@ -6,59 +6,83 @@ class ImagesRetriever extends React.Component {
 		super(props);
 
 		this.state = {
-			images_saved: 0,
-			images_required : 0
+			imagesSaved: 0,
+			imagesRequired : 0,
+			imagesWidth: 0,
+			imagesHeight: 0
 		};
+
+		this.handleSubmit = this.handleSubmit.bind(this);
+		this.handleImagesRequiredChange = this.handleImagesRequiredChange.bind(this);
+		this.handleImagesWidthChange = this.handleImagesWidthChange.bind(this);
+		this.handleImagesHeightChange = this.handleImagesHeightChange.bind(this);
 	}
 
 	imagesSaved () {
-		Wails.Events.On("image_saved", images_saved => {
-			this.setState({ images_saved: this.state.images_saved + 1 });
+		Wails.Events.On("image_saved", imagesSaved => {
+			this.setState({ imagesSaved: this.state.imagesSaved + 1 });
 		});
 	}
 
-	handleGetNewImages() {
-		window.backend.BackgroundRetriever.GetBackgrounds().then(result =>
+	handleSubmit(event) {
+		window.backend.BackgroundRetriever.GetBackgrounds(
+			parseInt(this.state.imagesRequired),
+			parseInt(this.state.imagesWidth),
+			parseInt(this.state.imagesHeight)
+		).then(result =>
 			console.log(result)
 		);
+		event.preventDefault()
+	}
+
+	handleImagesRequiredChange(event) {
+		this.setState({imagesRequired : event.target.value});
+	}
+
+	handleImagesWidthChange(event) {
+		this.setState({imagesWidth : event.target.value});
+	}
+
+	handleImagesHeightChange(event) {
+		this.setState({imagesHeight: event.target.value});
 	}
 
 	componentDidMount() {
 		this.imagesSaved = this.imagesSaved.bind(this);
-		this.handleGetNewImages = this.handleGetNewImages.bind(this)
+		this.handleSubmit = this.handleSubmit.bind(this);
 		this.imagesSaved();
 	}
 
 	render() {
 		return (
 			<div className="App">
-				<form>
-					<label htmlFor="backgrounds_count">
+				<form action="#" onSubmit={this.handleSubmit}>
+					<label htmlFor="backgroundsCount">
 						Backgrounds Count
 					</label>
 					<br/>
-					<input type="number" id="backgrounds_count" name="backgrounds_count">
+					<input type="number" name="images_required" value={this.state.imagesRequired} onChange={this.handleImagesRequiredChange}>
 					</input>
 					<br/>
 					<label htmlFor="width">
 						Width
 					</label>
 					<br/>
-					<input type="number" id="width" name="width">
+					<input type="number" name="width" value={this.state.imagesWidth} onChange={this.handleImagesWidthChange}>
 					</input>
 					<br/>
 					<label htmlFor="height">
 						Height
 					</label>
 					<br/>
-					<input type="number" id="height" name="height">
+					<input type="number" name="height" value={this.state.imagesHeight} onChange={this.handleImagesHeightChange}>
+					</input>
+					<br/>
+					<input type="submit" value="Get New Images">
 					</input>
 				</form>
-				<button onClick={() => this.handleGetNewImages()} type="button">
-					Get New Images
-				</button>
 				<p>
-					{this.state.images_saved.toString()}
+					{this.state.imagesSaved.toString()}
 				</p>
 			</div>
 		);

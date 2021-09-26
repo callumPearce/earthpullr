@@ -43,7 +43,10 @@ func (br *BackgroundRetriever) WailsInit(runtime *wails.Runtime) error {
 	return nil
 }
 
-	func (br *BackgroundRetriever) GetBackgrounds() (string, error) {
+func (br *BackgroundRetriever) GetBackgrounds(imagesRequired int, imagesWidth int, imagesHeight int) (string, error) {
+	br.backgroundsCount = imagesRequired
+	br.width = imagesWidth
+	br.height = imagesHeight
 	client := &http.Client{Timeout: 10 * time.Second}
 	ctx, err := addOAuthTokenToCtx(br.ctx, client, br.secretsMan, br.configMan)
 	if err != nil {
