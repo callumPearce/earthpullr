@@ -9,7 +9,8 @@ class ImagesRetriever extends React.Component {
 			imagesSaved: 0,
 			imagesRequired : 0,
 			imagesWidth: 0,
-			imagesHeight: 0
+			imagesHeight: 0,
+			responseMsg: ""
 		};
 
 		this.handleSubmit = this.handleSubmit.bind(this);
@@ -25,13 +26,17 @@ class ImagesRetriever extends React.Component {
 	}
 
 	handleSubmit(event) {
-		window.backend.BackgroundRetriever.GetBackgrounds(
-			parseInt(this.state.imagesRequired),
-			parseInt(this.state.imagesWidth),
-			parseInt(this.state.imagesHeight)
-		).then(result =>
-			console.log(result)
-		);
+		var request = {
+			ImagesRequired: parseInt(this.state.imagesRequired),
+			Width: parseInt(this.state.imagesWidth),
+			Height: parseInt(this.state.imagesHeight)
+		}
+		window.backend.BackgroundRetriever.GetBackgrounds(request).
+		then(result =>
+			this.setState({ responseMsg: result})
+		).catch(err =>
+			this.setState({ responseMsg: err})
+		)
 		event.preventDefault()
 	}
 
@@ -83,6 +88,9 @@ class ImagesRetriever extends React.Component {
 				</form>
 				<p>
 					{this.state.imagesSaved.toString()}
+				</p>
+				<p>
+					{this.state.responseMsg.toString()}
 				</p>
 			</div>
 		);

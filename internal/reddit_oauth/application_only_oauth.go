@@ -119,7 +119,6 @@ func NewApplicationOnlyOAuthRequest(ctx context.Context, client *http.Client, se
 	return appOnlyOAuthReq, err
 }
 
-
 func FromContext(ctx context.Context) (*OAuthToken, error) {
 	if ctx == nil {
 		return &OAuthToken{}, fmt.Errorf("cannot retrieve OAuthToken from nil context")

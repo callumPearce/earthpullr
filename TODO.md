@@ -5,6 +5,7 @@
 
 ### reddit_oauth
 - Retry logic on HTTP request
+- Background retriever should check if token is valid rather than retrieving a new one on every request
 
 ### reddit_cli
 - Retry logic on HTTP requests

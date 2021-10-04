@@ -17,7 +17,7 @@ const MAX_RES = 7680 // 8K
 const ACCEPTABLE_ASPECT_DIFF = 0.25
 
 type ListingsImagesRetriever struct {
-	logger 	      *zap.Logger
+	logger        *zap.Logger
 	requests      map[imageData]*http.Request
 	client        *http.Client
 	imageCount    int
@@ -62,7 +62,7 @@ func (retriever ListingsImagesRetriever) saveResponseToFile(filePath string, res
 	return nil
 }
 
-func (retriever ListingsImagesRetriever) SaveImages(directoryPath string, runtime *wails.Runtime) (err error) {
+func (retriever ListingsImagesRetriever) SaveImages(directoryPath string, runtime *wails.Runtime) error {
 	for image, request := range retriever.requests {
 		fileName, err := image.getImageName()
 		if err != nil {
