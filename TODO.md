@@ -1,7 +1,14 @@
 # TODO Items
 
+### Frontend
+- Make form  field class with its own methods so simplify front-end code struct
+
 ### bugs
 - If the directory does not exist to save images into, no err is thrown and images are not saved
+
+### background_retriever
+- Should store the latest image id retrieved (for a certain period of time) and only get images after that
+- Should not count an image that has already been downloaded as a new image (solve with the one above)
 
 ### reddit_oauth
 - Retry logic on HTTP request

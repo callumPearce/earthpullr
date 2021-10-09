@@ -10,6 +10,7 @@ import (
 	"github.com/wailsapp/wails"
 	"go.uber.org/zap"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 )
@@ -27,7 +28,8 @@ type BackgroundRetriever struct {
 type BackgroundsRequest struct {
 	Width          int
 	Height         int
-	ImagesRequired int
+	BackgroundsCount int
+	DownloadPath   string
 }
 
 func NewBackgroundRetriever(ctx context.Context, logger *zap.Logger, cm config.ConfigManager, sm secrets.SecretsManager) (*BackgroundRetriever, error) {
@@ -67,11 +69,15 @@ func (br *BackgroundRetriever) GetBackgrounds(request map[string]interface{}) (s
 	if err != nil {
 		return "Error", fmt.Errorf("failed to decode backgrounds request from frontend: %v", err)
 	}
+	if _, dirErr := os.Stat(brRequest.DownloadPath); os.IsNotExist(dirErr) {
+		return "Error", fmt.Errorf("download path '%s' does not exist", brRequest.DownloadPath)
+	}
 	br.logger.Info(fmt.Sprintf(
-		"Received a request to retrieve %d backgrounds with a minimum resolution of %dx%d",
-		brRequest.ImagesRequired,
+		"Received a request to retrieve %d backgrounds with a minimum resolution of %dx%d to directory %s",
+		brRequest.BackgroundsCount,
 		brRequest.Width,
 		brRequest.Height,
+		brRequest.DownloadPath,
 	))
 	err = br.addOAuthTokenToCtx()
 	if err != nil {
@@ -87,7 +93,7 @@ func (br *BackgroundRetriever) GetBackgrounds(request map[string]interface{}) (s
 func (br *BackgroundRetriever) getBackgroundsWithBatching(brRequest BackgroundsRequest) error {
 	savedImages := 0
 	afterUID := ""
-	for savedImages < brRequest.ImagesRequired {
+	for savedImages < brRequest.BackgroundsCount {
 		listingRequest, err := NewListingRequest(
 			br.ctx,
 			br.client,
@@ -102,14 +108,14 @@ func (br *BackgroundRetriever) getBackgroundsWithBatching(brRequest BackgroundsR
 		if err != nil {
 			return fmt.Errorf("failed to get Listings for subreddit: %v", err)
 		}
-		remainingImagesCount := brRequest.ImagesRequired - savedImages
+		remainingImagesCount := brRequest.BackgroundsCount - savedImages
 		imagesRetriever, err := NewImagesRetriever(br.logger, br.ctx, listingResponse, br.client, remainingImagesCount, brRequest.Width, brRequest.Height)
 		afterUID = imagesRetriever.finalImageUID
 		if err != nil {
 			err = fmt.Errorf("failed to retrieve image batch: %v", err)
 			return err
 		}
-		imagesRetriever.SaveImages("images", br.runtime)
+		imagesRetriever.SaveImages(brRequest.DownloadPath, br.runtime)
 		savedImages += imagesRetriever.imageCount
 	}
 	return nil
