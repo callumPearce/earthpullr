@@ -1,10 +1,8 @@
 # TODO Items
 
 ### Frontend
-- Make form  field class with its own methods so simplify front-end code struct
 
 ### bugs
-- If the directory does not exist to save images into, no err is thrown and images are not saved
 
 ### background_retriever
 - Should store the latest image id retrieved (for a certain period of time) and only get images after that
@@ -18,4 +16,4 @@
 - Retry logic on HTTP requests
 
 ### secrets
-- Cant be released until secret key is not stored in plaintext on machine 
+- Can't be released until secret key is not stored in plaintext on machine 

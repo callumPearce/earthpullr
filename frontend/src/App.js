@@ -7,6 +7,7 @@ function App() {
   return (
     <div id="app" className="App">
       <header className="App-header">
+          <meta name="viewport" content="initial-scale=1, width=device-width" />
         <ImagesRetriever />
       </header>
     </div>

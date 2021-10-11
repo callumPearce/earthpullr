@@ -1,6 +1,6 @@
 import React from 'react';
 import * as Wails from '@wailsapp/runtime'
-import fs from 'fs'
+import { FormControl, Input, TextField, Button } from '@mui/material';
 
 const MAX_RES = 7680
 const MAX_BACKGROUND_COUNT = 50
@@ -16,7 +16,6 @@ const imageDimensionValidation = dim => {
 }
 
 const backgroundCountValidation = count => {
-	console.log(count);
 	if (!count) {
 		return "The number of backgrounds you wish to retrieve must be specified"
 	}
@@ -42,9 +41,9 @@ class ImagesRetriever extends React.Component {
 
 		this.state = {
 			form: {
-				backgroundsCount: {value: 0, errMsg: "", valid: false, validator: backgroundCountValidation},
-				imagesWidth: {value: 0, errMsg: "", valid: false, validator: imageDimensionValidation},
-				imagesHeight: {value: 0, errMsg: "", valid: false, validator: imageDimensionValidation},
+				backgroundsCount: {value: 1, errMsg: "", valid: true, validator: backgroundCountValidation},
+				imagesWidth: {value: window.screen.width * window.devicePixelRatio, errMsg: "", valid: true, validator: imageDimensionValidation},
+				imagesHeight: {value: window.screen.height * window.devicePixelRatio, errMsg: "", valid: true, validator: imageDimensionValidation},
 				downloadPath: {value: "", errMsg: "", valid: false, validator: downloadPathValidation},
 			},
 			imagesSaved: 0,
@@ -61,12 +60,11 @@ class ImagesRetriever extends React.Component {
 		});
 	}
 
-	handleSubmit(event) {
+	handleSubmit() {
 		let valid = true;
 		for (const [name, value] of Object.entries(this.state.form)) {
 			valid = this.validateField(name, value.value) && valid
 		}
-		// console.log(this.state);
 		if (valid) {
 			const request = {
 				BackgroundsCount: parseInt(this.state.form.backgroundsCount.value),
@@ -83,7 +81,6 @@ class ImagesRetriever extends React.Component {
 		else {
 			this.setState({responseMsg: "Form is invalid"})
 		}
-		event.preventDefault()
 	}
 
 	validateField(name, value) {
@@ -96,8 +93,6 @@ class ImagesRetriever extends React.Component {
 			newState.form[name].valid = true;
 		}
 		newState.form[name].errMsg = errMsg;
-		console.log(errMsg)
-		console.log(newState.form[name].valid)
 		this.setState(newState);
 		return newState.form[name].valid
 	}
@@ -119,36 +114,55 @@ class ImagesRetriever extends React.Component {
 	render() {
 		return (
 			<div className="App">
-				<form action="#" onSubmit={this.handleSubmit} noValidate>
-					<label htmlFor="backgroundsCount">
-						Number of backgrounds
-					</label>
-					<br/>
-					<input type="number" name="backgroundsCount" value={this.state.form.backgroundsCount.value} onChange={this.handleUserInput} required/>
-					<p>{this.state.form.backgroundsCount.errMsg}</p>
-					<br/>
-					<label htmlFor="width">
-						Width
-					</label>
-					<br/>
-					<input type="number" name="imagesWidth" value={this.state.form.imagesWidth.value} onChange={this.handleUserInput} required/>
-					<p>{this.state.form.imagesWidth.errMsg}</p>
-					<br/>
-					<label htmlFor="height">
-						Height
-					</label>
-					<br/>
-					<input type="number" name="imagesHeight" value={this.state.form.imagesHeight.value} onChange={this.handleUserInput} required/>
-					<p>{this.state.form.imagesHeight.errMsg}</p>
-					<br/>
-					<label>
-						Download Path
-					</label>
-					<br/>
-					<input type="text" name="downloadPath" value={this.state.form.downloadPath.value} onChange={this.handleUserInput} required/>
-					<br/>
-					<input type="submit" value="Get New Images"/>
-				</form>
+				<FormControl action="#" noValidate>
+					<TextField
+						type="number"
+						label="Number of Backgrounds"
+						name="backgroundsCount"
+						value={this.state.form.backgroundsCount.value}
+						onChange={this.handleUserInput}
+						error={!this.state.form.backgroundsCount.valid}
+						helperText={this.state.form.backgroundsCount.errMsg}
+						required
+					/>
+					<TextField
+						type="number"
+						label="Image Width (px)"
+						name="imagesWidth"
+						value={this.state.form.imagesWidth.value}
+						onChange={this.handleUserInput}
+						error={!this.state.form.imagesWidth.valid}
+						helperText={this.state.form.imagesWidth.errMsg}
+						required
+					/>
+					<TextField
+						type="number"
+						label="Image Height (px)"
+						name="imagesHeight"
+						value={this.state.form.imagesHeight.value}
+						onChange={this.handleUserInput}
+						error={!this.state.form.imagesHeight.valid}
+						helperText={this.state.form.imagesHeight.errMsg}
+						required
+					/>
+					<TextField
+						type="text"
+						label= "Download Path"
+						name="downloadPath"
+						value={this.state.form.downloadPath.value}
+						onChange={this.handleUserInput}
+						error={!this.state.form.downloadPath.valid}
+						helperText={this.state.form.downloadPath.errMsg}
+						required
+					/>
+					<Button
+						type="submit"
+						variant="contained"
+						onClick={this.handleSubmit}
+					>
+						Get New Images
+					</Button>
+				</FormControl>
 				<p>
 					{this.state.imagesSaved.toString()}
 				</p>
