@@ -1,7 +1,7 @@
 import React from 'react';
 import * as Wails from '@wailsapp/runtime'
 import PropTypes from 'prop-types';
-import { FormControl, Container, Box,	 Grid, TextField, InputAdornment, Button, Typography, LinearProgress } from '@mui/material';
+import { FormControl, Container, Box,	 Grid, TextField, InputAdornment, Button, Typography, CircularProgress } from '@mui/material';
 
 const MAX_RES = 7680
 const MAX_BACKGROUND_COUNT = 50
@@ -36,29 +36,6 @@ const downloadPathValidation = path => {
 	return null;
 }
 
-ProgressBar.propTypes = {
-	/**
-	 * The value of the progress indicator for the determinate and buffer variants.
-	 * Value between 0 and 100.
-	 */
-	value: PropTypes.number.isRequired,
-};
-
-
-function ProgressBar(props) {
-	return (
-		<Box sx={{ display: 'flex', alignItems: 'center' }}>
-			<Box sx={{ width: '100%', mr: 1 }}>
-				<LinearProgress variant="determinate" {...props} />
-			</Box>
-			<Box sx={{ minWidth: 35 }}>
-				<Typography variant="body2" color="text.secondary">{`${Math.round(
-					props.value,
-				)}%`}</Typography>
-			</Box>
-		</Box>
-	);
-}
 
 class ImagesRetriever extends React.Component {
 	constructor(props, context) {
@@ -72,7 +49,17 @@ class ImagesRetriever extends React.Component {
 				downloadPath: {value: "", errMsg: "", valid: true, validator: downloadPathValidation},
 			},
 			imagesSaved: 0,
-			responseMsg: ""
+			responseMsg: "",
+			display_form: true,
+			display_progress_bar: false
+		};
+
+		this.ProgressBar.propTypes = {
+			/**
+			 * The value of the progress indicator for the determinate and buffer variants.
+			 * Value between 0 and 100.
+			 */
+			value: PropTypes.number.isRequired,
 		};
 
 		this.handleSubmit = this.handleSubmit.bind(this);
@@ -91,6 +78,10 @@ class ImagesRetriever extends React.Component {
 			valid = this.validateField(name, value.value) && valid
 		}
 		if (valid) {
+			this.setState({
+				display_form: false,
+				display_progress_bar: true
+			})
 			const request = {
 				BackgroundsCount: parseInt(this.state.form.backgroundsCount.value),
 				Width: parseInt(this.state.form.imagesWidth.value),
@@ -98,9 +89,17 @@ class ImagesRetriever extends React.Component {
 				DownloadPath: this.state.form.downloadPath.value
 			}
 			window.backend.BackgroundRetriever.GetBackgrounds(request).then(result =>
-				this.setState({responseMsg: result})
+				this.setState({
+					responseMsg: result,
+					display_form: true,
+					display_progress_bar: false
+				})
 			).catch(err =>
-				this.setState({responseMsg: err})
+				this.setState({
+					responseMsg: err,
+					display_form: false,
+					display_progress_bar: true
+				})
 			)
 		}
 		else {
@@ -136,15 +135,53 @@ class ImagesRetriever extends React.Component {
 		this.imagesSaved();
 	}
 
+	get progress_bar_value() {
+		if (this.state.form.backgroundsCount.value != null)
+			return (this.state.imagesSaved/this.state.form.backgroundsCount.value)*100
+		else
+			return 0
+	}
+
+	get progress_bar_label() {
+		if (this.state.form.backgroundsCount.value !=  null)
+			return `${this.state.imagesSaved}/${this.state.form.backgroundsCount.value}`
+		else
+			return ''
+	}
+
+	ProgressBar(props) {
+		return (
+			<Box sx={{ position: 'relative', display: 'inline-flex' }}>
+				<CircularProgress size="10ch" variant="determinate" {...props} />
+				<Box
+					sx={{
+						top: 0,
+						left: 0,
+						bottom: 0,
+						right: 0,
+						position: 'absolute',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+					}}
+				>
+					<Typography variant="caption" component="div" color="text.secondary">
+						{props.label}
+					</Typography>
+				</Box>
+			</Box>
+		);
+	}
+
 	render() {
 		return (
 			<Container component="div" className="App" sx={{ width: '34ch' }}>
-				<FormControl action="#" noValidate>
+				{this.state.display_form && <FormControl action="#" noValidate>
 					<Grid container spacing={2}>
 						<Grid item xs={12}>
 							<TextField
 								type="text"
-								label= "Download Path"
+								label="Download Path"
 								name="downloadPath"
 								value={this.state.form.downloadPath.value}
 								onChange={this.handleUserInput}
@@ -189,7 +226,7 @@ class ImagesRetriever extends React.Component {
 								onChange={this.handleUserInput}
 								error={!this.state.form.backgroundsCount.valid}
 								helperText={this.state.form.backgroundsCount.errMsg}
-								inputProps={{min: 0, style: { textAlign: 'center' }}}
+								inputProps={{min: 0, style: {textAlign: 'center'}}}
 								sx={{width: "14.5ch", m: .5}}
 								required
 							/>
@@ -204,15 +241,19 @@ class ImagesRetriever extends React.Component {
 							</Button>
 						</Grid>
 						<Grid item xs={12}>
-							<ProgressBar value={(this.state.imagesSaved/this.state.form.backgroundsCount.value)*100}/>
-						</Grid>
-						<Grid item xs={12}>
 							<p>
 								{this.state.responseMsg.toString()}
 							</p>
 						</Grid>
 					</Grid>
 				</FormControl>
+				}
+				{ this.state.display_progress_bar &&
+				<this.ProgressBar
+					hidden={this.state.display_progress_bar}
+					value={this.progress_bar_value}
+					label={this.progress_bar_label}/>
+				}
 			</Container>
 		);
 	}
