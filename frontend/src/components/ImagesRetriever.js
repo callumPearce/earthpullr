@@ -50,8 +50,9 @@ class ImagesRetriever extends React.Component {
 			},
 			imagesSaved: 0,
 			responseMsg: "",
-			display_form: true,
-			display_progress_bar: false
+			displayForm: true,
+			displayProgressBar: false,
+			displayGetMoreImages: false
 		};
 
 		this.ProgressBar.propTypes = {
@@ -63,7 +64,44 @@ class ImagesRetriever extends React.Component {
 		};
 
 		this.handleSubmit = this.handleSubmit.bind(this);
+		this.setDisplayFormState = this.setDisplayFormState.bind(this);
 		this.handleUserInput = this.handleUserInput.bind(this);
+	}
+
+	setDisplayFormState(errMsg) {
+		if (errMsg != null) {
+			this.setState({
+				displayForm: true,
+				displayProgressBar: false,
+				displayGetMoreImages: false,
+				responseMsg: errMsg,
+				imagesSaved: 0
+			})
+		} else {
+			this.setState({
+				displayForm: true,
+				displayProgressBar: false,
+				displayGetMoreImages: false,
+				responseMsg: "",
+				imagesSaved: 0
+			})
+		}
+	}
+
+	setDisplayProgressBarState() {
+		this.setState({
+			displayForm: false,
+			displayProgressBar: true,
+			displayGetMoreImages: false
+		})
+	}
+
+	setDisplayGetMoreImagesState() {
+		this.setState({
+			displayForm: false,
+			displayProgressBar: true,
+			displayGetMoreImages: true
+		})
 	}
 
 	imagesSaved () {
@@ -78,10 +116,7 @@ class ImagesRetriever extends React.Component {
 			valid = this.validateField(name, value.value) && valid
 		}
 		if (valid) {
-			this.setState({
-				display_form: false,
-				display_progress_bar: true
-			})
+			this.setDisplayProgressBarState();
 			const request = {
 				BackgroundsCount: parseInt(this.state.form.backgroundsCount.value),
 				Width: parseInt(this.state.form.imagesWidth.value),
@@ -89,17 +124,10 @@ class ImagesRetriever extends React.Component {
 				DownloadPath: this.state.form.downloadPath.value
 			}
 			window.backend.BackgroundRetriever.GetBackgrounds(request).then(result =>
-				this.setState({
-					responseMsg: result,
-					display_form: true,
-					display_progress_bar: false
-				})
-			).catch(err =>
-				this.setState({
-					responseMsg: err,
-					display_form: false,
-					display_progress_bar: true
-				})
+				this.setDisplayGetMoreImagesState()
+			)
+			.catch(err =>
+				this.setDisplayFormState(err)
 			)
 		}
 		else {
@@ -151,7 +179,7 @@ class ImagesRetriever extends React.Component {
 
 	ProgressBar(props) {
 		return (
-			<Box sx={{ position: 'relative', display: 'inline-flex' }}>
+			<Box sx={{ position: 'relative' }}>
 				<CircularProgress size="10ch" variant="determinate" {...props} />
 				<Box
 					sx={{
@@ -175,8 +203,8 @@ class ImagesRetriever extends React.Component {
 
 	render() {
 		return (
-			<Container component="div" className="App" sx={{ width: '34ch' }}>
-				{this.state.display_form && <FormControl action="#" noValidate>
+			<Container component="div" className="App" sx={{ width: '25ch' }}>
+				{this.state.displayForm && <FormControl action="#" noValidate>
 					<Grid container spacing={2}>
 						<Grid item xs={12}>
 							<TextField
@@ -241,18 +269,28 @@ class ImagesRetriever extends React.Component {
 							</Button>
 						</Grid>
 						<Grid item xs={12}>
-							<p>
+							<Typography variant="body1" component="div" color="red">
 								{this.state.responseMsg.toString()}
-							</p>
+							</Typography>
 						</Grid>
 					</Grid>
 				</FormControl>
 				}
-				{ this.state.display_progress_bar &&
+				{ this.state.displayProgressBar &&
 				<this.ProgressBar
-					hidden={this.state.display_progress_bar}
+					hidden={this.state.displayProgressBar}
 					value={this.progress_bar_value}
 					label={this.progress_bar_label}/>
+				}
+				{ this.state.displayGetMoreImages &&
+					<Box sx={{ position: 'relative'}}>
+						<Button
+							variant="contained"
+							onClick={() => this.setDisplayFormState("")}
+						>
+							Get More Images
+						</Button>
+					</Box>
 				}
 			</Container>
 		);

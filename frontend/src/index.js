@@ -16,7 +16,7 @@ Wails.Init(() => {
   ReactDOM.render(
     <React.StrictMode>
         <CssBaseline/>
-      <App />
+      <App/>
     </React.StrictMode>,
     document.getElementById("app")
   );

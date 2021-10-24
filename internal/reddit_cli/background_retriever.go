@@ -70,7 +70,7 @@ func (br *BackgroundRetriever) GetBackgrounds(request map[string]interface{}) (s
 		return "Error", fmt.Errorf("failed to decode backgrounds request from frontend: %v", err)
 	}
 	if _, dirErr := os.Stat(brRequest.DownloadPath); os.IsNotExist(dirErr) {
-		return "Error", fmt.Errorf("download path '%s' does not exist", brRequest.DownloadPath)
+		return "Error", fmt.Errorf("Download path '%s' does not exist", brRequest.DownloadPath)
 	}
 	br.logger.Info(fmt.Sprintf(
 		"Received a request to retrieve %d backgrounds with a minimum resolution of %dx%d to directory %s",
