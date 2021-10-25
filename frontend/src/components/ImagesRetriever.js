@@ -10,6 +10,10 @@ const imageDimensionValidation = dim => {
 	if (!dim) {
 		return "Both background width and height must be specified"
 	}
+	let parsedDim = parseFloat(dim);
+	if (!((parsedDim | 0) === parsedDim)) {
+		return "Dimension must be a number"
+	}
 	if (dim < 1 || dim > MAX_RES) {
 		return "Maximum size of backgrounds that can be retrieved " + MAX_RES.toString() + "px (8k) in both dimensions";
 	}
@@ -203,7 +207,7 @@ class ImagesRetriever extends React.Component {
 
 	render() {
 		return (
-			<Container component="div" className="App" sx={{ width: '25ch' }}>
+			<Container component="div" className="App" sx={{ width: '40ch', alignItems: 'center', justifyContent: 'center'}}>
 				{this.state.displayForm && <FormControl action="#" noValidate>
 					<Grid container spacing={2}>
 						<Grid item xs={12}>
@@ -215,13 +219,13 @@ class ImagesRetriever extends React.Component {
 								onChange={this.handleUserInput}
 								error={!this.state.form.downloadPath.valid}
 								helperText={this.state.form.downloadPath.errMsg}
-								sx={{width: "14.5ch", m: .5}}
+								sx={{width: "24.5ch", m: .5}}
 								required
 							/>
 						</Grid>
 						<Grid item xs={12}>
 							<TextField
-								type="number"
+								type="tel"
 								label="Width"
 								name="imagesWidth"
 								value={this.state.form.imagesWidth.value}
@@ -229,11 +233,11 @@ class ImagesRetriever extends React.Component {
 								error={!this.state.form.imagesWidth.valid}
 								helperText={this.state.form.imagesWidth.errMsg}
 								InputProps={{endAdornment: <InputAdornment position="end">px</InputAdornment>}}
-								sx={{width: "7ch", m: .5}}
+								sx={{width: "12ch", m: .5}}
 								required
 							/>
 							<TextField
-								type="number"
+								type="tel"
 								label="Height"
 								name="imagesHeight"
 								value={this.state.form.imagesHeight.value}
@@ -241,13 +245,13 @@ class ImagesRetriever extends React.Component {
 								error={!this.state.form.imagesHeight.valid}
 								helperText={this.state.form.imagesHeight.errMsg}
 								InputProps={{endAdornment: <InputAdornment position="end">px</InputAdornment>}}
-								sx={{width: "7ch", m: .5}}
+								sx={{width: "12ch", m: .5}}
 								required
 							/>
 						</Grid>
 						<Grid item xs={12}>
 							<TextField
-								type="number"
+								type="tel"
 								label="Backgrounds"
 								name="backgroundsCount"
 								value={this.state.form.backgroundsCount.value}
@@ -255,7 +259,7 @@ class ImagesRetriever extends React.Component {
 								error={!this.state.form.backgroundsCount.valid}
 								helperText={this.state.form.backgroundsCount.errMsg}
 								inputProps={{min: 0, style: {textAlign: 'center'}}}
-								sx={{width: "14.5ch", m: .5}}
+								sx={{width: "24.5ch", m: .5}}
 								required
 							/>
 						</Grid>

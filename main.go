@@ -8,6 +8,8 @@ import (
 	"earthpullr/pkg/file_readers"
 	"earthpullr/pkg/log"
 	_ "embed"
+	"fmt"
+	"github.com/kbinani/screenshot"
 	"github.com/wailsapp/wails"
 	"go.uber.org/zap"
 	"os"
@@ -33,9 +35,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	bounds := screenshot.GetDisplayBounds(0)
+	x := bounds.Dx()
+	fmt.Println(x)
+	fmt.Println(bounds.Dy())
+	//width := int(x/5)
+	//height := int(float64(width) * 1.15)
+
 	app := wails.CreateApp(&wails.AppConfig{
-		Width:  1024,
-		Height: 768,
+		MaxWidth:  bounds.Dx(),
+		MaxHeight: bounds.Dy(),
 		Title:  "earthpullr",
 		JS:     js,
 		CSS:    css,

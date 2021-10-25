@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
+	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
 	github.com/leaanthony/slicer v1.6.0 // indirect
 	github.com/mattn/go-colorable v0.1.11 // indirect
 	github.com/mitchellh/mapstructure v1.4.2
