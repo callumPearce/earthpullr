@@ -125,7 +125,19 @@ func imageFitsSpecifiedResolution(logger *zap.Logger, image imageData, width int
 	return valid
 }
 
-func NewImagesRetriever(logger *zap.Logger, ctx context.Context, lres ListingResponse, client *http.Client, maxImages int, width int, height int) (imagesRetriever ListingsImagesRetriever, err error) {
+func imageHasBeenDownloaded(logger *zap.Logger, image imageData, existingImages *map[string]bool) (exists bool) {
+	fname, err := image.getImageName()
+	if err != nil {
+		return false
+	}
+	if _, ok := (*existingImages)[fname]; ok {
+		logger.Debug(fmt.Sprintf("Image '%s' already exists in the download directory", fname, ))
+		return true
+	}
+	return false
+}
+
+func NewImagesRetriever(logger *zap.Logger, ctx context.Context, lres ListingResponse, client *http.Client, maxImages int, width int, height int, existingImages *map[string]bool) (imagesRetriever ListingsImagesRetriever, err error) {
 	var images []imageData
 
 	if width <= 0 || width > MAX_RES || height <= 0 || height > MAX_RES {
@@ -146,7 +158,7 @@ func NewImagesRetriever(logger *zap.Logger, ctx context.Context, lres ListingRes
 			image.URL = imageObj.Source.URL
 			image.Width = imageObj.Source.Width
 			image.Height = imageObj.Source.Height
-			if imageFitsSpecifiedResolution(logger, image, width, height) {
+			if imageFitsSpecifiedResolution(logger, image, width, height) && !imageHasBeenDownloaded(logger, image, existingImages) {
 				images = append(images, image)
 				imageCount += 1
 			}

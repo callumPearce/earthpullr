@@ -83,14 +83,26 @@ func (br *BackgroundRetriever) GetBackgrounds(request map[string]interface{}) (s
 	if err != nil {
 		return "Error", fmt.Errorf("failed to get new backgrounds: %v", err)
 	}
-	err = br.getBackgroundsWithBatching(brRequest)
+	existingBackgrounds, err := getExistingBackgroundsMap(brRequest.DownloadPath)
+	err = br.getBackgroundsWithBatching(brRequest, existingBackgrounds)
 	if err != nil {
 		return "Error", err
 	}
 	return "Success", nil
 }
 
-func (br *BackgroundRetriever) getBackgroundsWithBatching(brRequest BackgroundsRequest) error {
+func getExistingBackgroundsMap(downloadPath string) (*map[string]bool, error) {
+	// TODO: Read earthpullr_existing_images.json in if it exists, otherwise just return empty map
+	existingBackgrounds := map[string]bool{}
+	return &existingBackgrounds, nil
+}
+
+func saveExistingBackgrounds(downloadPath string, existingBackgrounds *map[string]bool) error {
+	// TODO: Save map to earthpullr_existing_images.json
+	return nil
+}
+
+func (br *BackgroundRetriever) getBackgroundsWithBatching(brRequest BackgroundsRequest, existingBackgrounds *map[string]bool) error {
 	savedImages := 0
 	afterUID := ""
 	for savedImages < brRequest.BackgroundsCount {
@@ -109,7 +121,7 @@ func (br *BackgroundRetriever) getBackgroundsWithBatching(brRequest BackgroundsR
 			return fmt.Errorf("failed to get Listings for subreddit: %v", err)
 		}
 		remainingImagesCount := brRequest.BackgroundsCount - savedImages
-		imagesRetriever, err := NewImagesRetriever(br.logger, br.ctx, listingResponse, br.client, remainingImagesCount, brRequest.Width, brRequest.Height)
+		imagesRetriever, err := NewImagesRetriever(br.logger, br.ctx, listingResponse, br.client, remainingImagesCount, brRequest.Width, brRequest.Height, existingBackgrounds)
 		afterUID = imagesRetriever.finalImageUID
 		if err != nil {
 			err = fmt.Errorf("failed to retrieve image batch: %v", err)
@@ -118,7 +130,7 @@ func (br *BackgroundRetriever) getBackgroundsWithBatching(brRequest BackgroundsR
 		imagesRetriever.SaveImages(brRequest.DownloadPath, br.runtime)
 		savedImages += imagesRetriever.imageCount
 	}
-	return nil
+	return saveExistingBackgrounds(brRequest.DownloadPath, existingBackgrounds)
 }
 
 func (br *BackgroundRetriever) addOAuthTokenToCtx() error {
