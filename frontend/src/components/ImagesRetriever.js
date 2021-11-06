@@ -1,7 +1,8 @@
 import React from 'react';
 import * as Wails from '@wailsapp/runtime'
 import PropTypes from 'prop-types';
-import { FormControl, Container, Box,	 Grid, TextField, InputAdornment, Button, Typography, CircularProgress } from '@mui/material';
+import { FormControl, Container, Box, Grid, TextField, Tooltip, Button, Typography, CircularProgress } from '@mui/material';
+import { styled } from '@mui/material/styles';
 
 const MAX_RES = 7680
 const MAX_BACKGROUND_COUNT = 50
@@ -40,8 +41,40 @@ const downloadPathValidation = path => {
 	return null;
 }
 
+const CssTextField = styled(TextField)({
+	'& label.Mui-focused': {
+		color: 'white',
+	},
+	'& label': {
+		color: '#1976d2',
+	},
+	'&:hover label': {
+		color: 'white',
+	},
+	'& .MuiInput-underline:after': {
+		borderBottomColor: 'red',
+	},
+	'& .MuiOutlinedInput-root': {
+		'& fieldset': {
+			borderColor: '#125394',
+		},
+		'&.Mui-focused input': {
+			color: 'white',
+		},
+		'& input': {
+			color: '#1976d2',
+		},
+		'&:hover fieldset': {
+			borderColor: 'white',
+		},
+		'&.Mui-focused fieldset': {
+			borderColor: 'white',
+		},
+	},
+});
 
 class ImagesRetriever extends React.Component {
+
 	constructor(props, context) {
 		super(props);
 
@@ -197,7 +230,7 @@ class ImagesRetriever extends React.Component {
 						justifyContent: 'center',
 					}}
 				>
-					<Typography variant="caption" component="div" color="text.secondary">
+					<Typography variant="caption" component="div" color="#1976d2">
 						{props.label}
 					</Typography>
 				</Box>
@@ -205,13 +238,24 @@ class ImagesRetriever extends React.Component {
 		);
 	}
 
+	StyledAdornment(props) {
+		return (
+			<p style={{color: "#125394"}}>
+				px
+			</p>
+		)
+	}
+
 	render() {
 		return (
-			<Container component="div" className="App" sx={{ width: '40ch', alignItems: 'center', justifyContent: 'center'}}>
+			<Container component="div" className="App" sx={{  alignItems: 'center', justifyContent: 'center'}}>
 				{this.state.displayForm && <FormControl action="#" noValidate>
 					<Grid container spacing={2}>
 						<Grid item xs={12}>
-							<TextField
+							<Typography variant="overline" style={{color: "#1976d2", fontSize: "1.5ch"}}>earthpull/r</Typography>
+						</Grid>
+						<Grid item xs={12}>
+							<CssTextField
 								type="text"
 								label="Download Path"
 								name="downloadPath"
@@ -224,33 +268,37 @@ class ImagesRetriever extends React.Component {
 							/>
 						</Grid>
 						<Grid item xs={12}>
-							<TextField
-								type="tel"
-								label="Width"
-								name="imagesWidth"
-								value={this.state.form.imagesWidth.value}
-								onChange={this.handleUserInput}
-								error={!this.state.form.imagesWidth.valid}
-								helperText={this.state.form.imagesWidth.errMsg}
-								InputProps={{endAdornment: <InputAdornment position="end">px</InputAdornment>}}
-								sx={{width: "12ch", m: .5}}
-								required
-							/>
-							<TextField
-								type="tel"
-								label="Height"
-								name="imagesHeight"
-								value={this.state.form.imagesHeight.value}
-								onChange={this.handleUserInput}
-								error={!this.state.form.imagesHeight.valid}
-								helperText={this.state.form.imagesHeight.errMsg}
-								InputProps={{endAdornment: <InputAdornment position="end">px</InputAdornment>}}
-								sx={{width: "12ch", m: .5}}
-								required
-							/>
+							<Tooltip title="Initially set to your primary screen's width">
+								<CssTextField
+									type="tel"
+									label="Width"
+									name="imagesWidth"
+									value={this.state.form.imagesWidth.value}
+									onChange={this.handleUserInput}
+									error={!this.state.form.imagesWidth.valid}
+									helperText={this.state.form.imagesWidth.errMsg}
+									InputProps={{endAdornment: <this.StyledAdornment/>}}
+									sx={{width: "12ch", m: .5}}
+									required
+								/>
+							</Tooltip>
+							<Tooltip title="Initially set to your primary screen's height">
+								<CssTextField
+									type="tel"
+									label="Height"
+									name="imagesHeight"
+									value={this.state.form.imagesHeight.value}
+									onChange={this.handleUserInput}
+									error={!this.state.form.imagesHeight.valid}
+									helperText={this.state.form.imagesHeight.errMsg}
+									InputProps={{endAdornment: <this.StyledAdornment/>}}
+									sx={{width: "12ch", m: .5}}
+									required
+								/>
+							</Tooltip>
 						</Grid>
 						<Grid item xs={12}>
-							<TextField
+							<CssTextField
 								type="tel"
 								label="Backgrounds"
 								name="backgroundsCount"
@@ -268,8 +316,9 @@ class ImagesRetriever extends React.Component {
 								type="submit"
 								variant="contained"
 								onClick={this.handleSubmit}
+								back
 							>
-								Get New Images
+								Pull
 							</Button>
 						</Grid>
 						<Grid item xs={12}>
@@ -287,12 +336,12 @@ class ImagesRetriever extends React.Component {
 					label={this.progress_bar_label}/>
 				}
 				{ this.state.displayGetMoreImages &&
-					<Box sx={{ position: 'relative'}}>
+					<Box sx={{ padding: "2ch", position: 'relative'}}>
 						<Button
 							variant="contained"
 							onClick={() => this.setDisplayFormState("")}
 						>
-							Get More Images
+							Done
 						</Button>
 					</Box>
 				}
