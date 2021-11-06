@@ -268,7 +268,7 @@ class ImagesRetriever extends React.Component {
 							/>
 						</Grid>
 						<Grid item xs={12}>
-							<Tooltip title="Initially set to your primary screen's width">
+							<Tooltip title="Initially set to your current screen's width">
 								<CssTextField
 									type="tel"
 									label="Width"
@@ -282,7 +282,7 @@ class ImagesRetriever extends React.Component {
 									required
 								/>
 							</Tooltip>
-							<Tooltip title="Initially set to your primary screen's height">
+							<Tooltip title="Initially set to your current screen's height">
 								<CssTextField
 									type="tel"
 									label="Height"
@@ -300,7 +300,7 @@ class ImagesRetriever extends React.Component {
 						<Grid item xs={12}>
 							<CssTextField
 								type="tel"
-								label="Backgrounds"
+								label="Images"
 								name="backgroundsCount"
 								value={this.state.form.backgroundsCount.value}
 								onChange={this.handleUserInput}
