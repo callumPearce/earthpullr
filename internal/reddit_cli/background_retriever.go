@@ -5,12 +5,15 @@ import (
 	"earthpullr/internal/reddit_oauth"
 	"earthpullr/internal/secrets"
 	"earthpullr/pkg/config"
+	"earthpullr/pkg/file_readers"
+	"errors"
 	"fmt"
 	"github.com/mitchellh/mapstructure"
 	"github.com/wailsapp/wails"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -83,7 +86,7 @@ func (br *BackgroundRetriever) GetBackgrounds(request map[string]interface{}) (s
 	if err != nil {
 		return "Error", fmt.Errorf("failed to get new backgrounds: %v", err)
 	}
-	existingBackgrounds, err := getExistingBackgroundsMap(brRequest.DownloadPath)
+	existingBackgrounds := br.getExistingBackgroundsMap(brRequest.DownloadPath)
 	err = br.getBackgroundsWithBatching(brRequest, existingBackgrounds)
 	if err != nil {
 		return "Error", err
@@ -91,18 +94,49 @@ func (br *BackgroundRetriever) GetBackgrounds(request map[string]interface{}) (s
 	return "Success", nil
 }
 
-func getExistingBackgroundsMap(downloadPath string) (*map[string]bool, error) {
-	// TODO: Read earthpullr_existing_images.json in if it exists, otherwise just return empty map
-	existingBackgrounds := map[string]bool{}
-	return &existingBackgrounds, nil
+func (br *BackgroundRetriever) getExistingBackgroundPath(downloadPath string) (string, error){
+	existingImagesFname, err := br.configMan.GetConfig("existing_images_filename")
+	if err != nil {
+		return "", fmt.Errorf("failed to build path to existing images: %v", err)
+	}
+	existingBackgroundFpath := filepath.Join(downloadPath, existingImagesFname)
+	return existingBackgroundFpath, nil
 }
 
-func saveExistingBackgrounds(downloadPath string, existingBackgrounds *map[string]bool) error {
-	// TODO: Save map to earthpullr_existing_images.json
-	return nil
+func (br *BackgroundRetriever) getExistingBackgroundsMap(downloadPath string) *map[string]string {
+	existingBackgrounds := map[string]string{}
+	existingBackgroundFpath, err := br.getExistingBackgroundPath(downloadPath)
+	if err != nil {
+		br.logger.Error(fmt.Sprintf("%v", err))
+		return &existingBackgrounds
+	}
+
+	if _, err := os.Stat(existingBackgroundFpath); errors.Is(err, os.ErrNotExist) {
+		// Existing backgrounds file doesn't exist, just return an empty map
+		return &existingBackgrounds
+	}
+
+	existingBackgroundsJson, err := file_readers.NewFlatJsonFile(existingBackgroundFpath)
+	if err != nil {
+		br.logger.Error("failed to read existing images json file", zap.Error(err))
+		return &existingBackgrounds
+	}
+
+	existingBackgrounds = existingBackgroundsJson.Data
+	return &existingBackgrounds
 }
 
-func (br *BackgroundRetriever) getBackgroundsWithBatching(brRequest BackgroundsRequest, existingBackgrounds *map[string]bool) error {
+func (br *BackgroundRetriever) saveExistingBackgrounds(downloadPath string, existingBackgrounds *map[string]string) error {
+	existingBackgroundFpath, err := br.getExistingBackgroundPath(downloadPath)
+	if err != nil {
+		return err
+	}
+	err = file_readers.SaveMapAsJson(*existingBackgrounds, existingBackgroundFpath)
+	br.logger.Info(fmt.Sprintf("saved existing backgrounds file to '%s'", existingBackgroundFpath))
+	return err
+}
+
+func (br *BackgroundRetriever) getBackgroundsWithBatching(brRequest BackgroundsRequest, existingBackgrounds *map[string]string) error {
 	savedImages := 0
 	afterUID := ""
 	for savedImages < brRequest.BackgroundsCount {
@@ -127,10 +161,10 @@ func (br *BackgroundRetriever) getBackgroundsWithBatching(brRequest BackgroundsR
 			err = fmt.Errorf("failed to retrieve image batch: %v", err)
 			return err
 		}
-		imagesRetriever.SaveImages(brRequest.DownloadPath, br.runtime)
+		imagesRetriever.SaveImages(brRequest.DownloadPath, br.runtime, existingBackgrounds)
 		savedImages += imagesRetriever.imageCount
 	}
-	return saveExistingBackgrounds(brRequest.DownloadPath, existingBackgrounds)
+	return br.saveExistingBackgrounds(brRequest.DownloadPath, existingBackgrounds)
 }
 
 func (br *BackgroundRetriever) addOAuthTokenToCtx() error {

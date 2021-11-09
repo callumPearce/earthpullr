@@ -10,5 +10,6 @@
     "subreddit": "earthporn",   
     "subreddit_search_type": "hot",
     "query_batch_size": "100",
-    "max_aggregated_query_time_secs": "30"
+    "max_aggregated_query_time_secs": "30",
+    "existing_images_filename": "earthpullr_existing_images.json"
 }

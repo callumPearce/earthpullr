@@ -47,9 +47,12 @@ func (jsonFile *FlatJsonFile) readJsonFile() (err error) {
 	if err != nil {
 		return err
 	}
-	var secrets map[string]string
-	json.Unmarshal([]byte(byteValue), &secrets)
-	jsonFile.Data = secrets
+	var data map[string]string
+	err = json.Unmarshal(byteValue, &data)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshall json file: %v", err)
+	}
+	jsonFile.Data = data
 	return err
 }
 
@@ -59,4 +62,13 @@ func NewFlatJsonFile(filePath string) (FlatJsonFile, error) {
 	}
 	err := jsonFile.readJsonFile()
 	return jsonFile, err
+}
+
+func SaveMapAsJson(data map[string]string, filepath string) error {
+	out, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("failed to marshall data to json: %v", err)
+	}
+	err = ioutil.WriteFile(filepath, out, 0644)
+	return err
 }
