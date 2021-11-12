@@ -2,7 +2,6 @@ package reddit_oauth
 
 import (
 	"context"
-	"earthpullr/internal/secrets"
 	"earthpullr/pkg/config"
 	"encoding/json"
 	"fmt"
@@ -16,7 +15,6 @@ const oAuthTokenKey int = 0
 
 type ApplicationOnlyOAuthRequest struct {
 	request           *http.Request
-	redditAppClientID string
 	oauthConf         map[string]string
 	userAgent         string
 	client            *http.Client
@@ -39,7 +37,7 @@ func (oAuthRequest *ApplicationOnlyOAuthRequest) getPostRequest(ctx context.Cont
 	)
 	req.Header.Add("Content-Type", oAuthRequest.oauthConf["reddit_content_type_header"])
 	req.Header.Add("User-Agent", oAuthRequest.userAgent)
-	req.SetBasicAuth(oAuthRequest.redditAppClientID, "")
+	req.SetBasicAuth(oAuthRequest.oauthConf["reddit_app_client_id"], "")
 	return req, err
 }
 
@@ -85,13 +83,14 @@ func (oAuthRequest ApplicationOnlyOAuthRequest) NewOAuthToken() (oAuthTokenPtr *
 	return &oAuthToken, err
 }
 
-func NewApplicationOnlyOAuthRequest(ctx context.Context, client *http.Client, secretMan secrets.SecretsManager, configMan config.ConfigManager) (appOnlyOAuthReq ApplicationOnlyOAuthRequest, err error) {
+func NewApplicationOnlyOAuthRequest(ctx context.Context, client *http.Client, configMan config.ConfigManager) (appOnlyOAuthReq ApplicationOnlyOAuthRequest, err error) {
 	errStrPrefix := "failed to create http request to retrieve application only oauth auth token: "
 	oauthConf, err := configMan.GetMultiConfig([]string{
 		"reddit_grant_type_header",
 		"reddit_access_token_url",
 		"reddit_device_id_header",
 		"reddit_content_type_header",
+		"reddit_app_client_id",
 		"platform",
 		"application_name",
 		"version",
@@ -99,14 +98,12 @@ func NewApplicationOnlyOAuthRequest(ctx context.Context, client *http.Client, se
 	if err != nil {
 		return appOnlyOAuthReq, fmt.Errorf(errStrPrefix+"%v", err)
 	}
-	client_id, err := secretMan.GetSecret("reddit_app_client_id")
 	if err != nil {
 		return appOnlyOAuthReq, fmt.Errorf(errStrPrefix+"%v", err)
 	}
 	appOnlyOAuthReq = ApplicationOnlyOAuthRequest{
 		oauthConf:         oauthConf,
 		userAgent:         oauthConf["platform"] + ":" + oauthConf["application_name"] + ":" + oauthConf["version"],
-		redditAppClientID: client_id,
 		client:            client,
 	}
 	req, err := appOnlyOAuthReq.getPostRequest(ctx)

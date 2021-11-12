@@ -3,7 +3,6 @@ package reddit_cli
 import (
 	"context"
 	"earthpullr/internal/reddit_oauth"
-	"earthpullr/internal/secrets"
 	"earthpullr/pkg/config"
 	"earthpullr/pkg/file_readers"
 	"errors"
@@ -21,7 +20,6 @@ import (
 type BackgroundRetriever struct {
 	logger                     *zap.Logger
 	configMan                  config.ConfigManager
-	secretsMan                 secrets.SecretsManager
 	maxAggregatedQueryTimeSecs int
 	runtime                    *wails.Runtime
 	ctx                        context.Context
@@ -35,7 +33,7 @@ type BackgroundsRequest struct {
 	DownloadPath   string
 }
 
-func NewBackgroundRetriever(ctx context.Context, logger *zap.Logger, cm config.ConfigManager, sm secrets.SecretsManager) (*BackgroundRetriever, error) {
+func NewBackgroundRetriever(ctx context.Context, logger *zap.Logger, cm config.ConfigManager) (*BackgroundRetriever, error) {
 	backgroundConf, err := cm.GetMultiConfig([]string{
 		"subreddit",
 		"subreddit_search_type",
@@ -53,7 +51,6 @@ func NewBackgroundRetriever(ctx context.Context, logger *zap.Logger, cm config.C
 	retriever := &BackgroundRetriever{
 		logger:                     logger,
 		configMan:                  cm,
-		secretsMan:                 sm,
 		maxAggregatedQueryTimeSecs: maxAggregatedQueryTimeSecs,
 		ctx:                        ctx,
 		client:                     &http.Client{Timeout: 10 * time.Second},
@@ -168,7 +165,7 @@ func (br *BackgroundRetriever) getBackgroundsWithBatching(brRequest BackgroundsR
 }
 
 func (br *BackgroundRetriever) addOAuthTokenToCtx() error {
-	redditOauth, err := reddit_oauth.NewApplicationOnlyOAuthRequest(br.ctx, br.client, br.secretsMan, br.configMan)
+	redditOauth, err := reddit_oauth.NewApplicationOnlyOAuthRequest(br.ctx, br.client, br.configMan)
 	if err != nil {
 		return fmt.Errorf("failed to build request to retrieve oauth Token from reddit: %v", err)
 	}

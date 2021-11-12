@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"earthpullr/internal/reddit_cli"
-	"earthpullr/internal/secrets"
 	"earthpullr/pkg/config"
 	"earthpullr/pkg/file_readers"
 	"earthpullr/pkg/log"
@@ -25,10 +24,9 @@ func main() {
 	logger := log.New()
 	zap.ReplaceGlobals(logger)
 
-	secretsMan := getSecretsManager(logger, "secrets.json")
 	configMan := getConfigManager(logger, "config.json")
 	ctx := context.Background()
-	retriever, err := reddit_cli.NewBackgroundRetriever(ctx, logger, configMan, secretsMan)
+	retriever, err := reddit_cli.NewBackgroundRetriever(ctx, logger, configMan)
 	if err != nil {
 		logger.Fatal("Failed to create background retriever", zap.Error(err))
 		os.Exit(1)
@@ -48,18 +46,6 @@ func main() {
 	})
 	app.Bind(retriever)
 	app.Run()
-}
-
-func getSecretsManager(logger *zap.Logger, jsonFilePath string) secrets.SecretsManager {
-	flatJsonSecrets, err := file_readers.NewFlatJsonFile(jsonFilePath)
-	if err != nil {
-		logger.Fatal("Failed to create Secrets Manager", zap.Error(err))
-		os.Exit(1)
-	}
-	secretsMan := secrets.FlatJsonFileSecretManagerAdaptor{
-		FlatJsonFile: flatJsonSecrets,
-	}
-	return secretsMan
 }
 
 func getConfigManager(logger *zap.Logger, jsonFilePath string) config.ConfigManager {
