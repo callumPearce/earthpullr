@@ -3,17 +3,18 @@ package reddit_cli
 import (
 	"context"
 	reddit_oauth2 "earthpullr/internal/reddit_oauth"
-	"earthpullr/pkg/config"
+	"earthpullr/internal/config"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
 type ListingRequest struct {
-	listingsConf map[string]string
+	conf config.Config
 	client       *http.Client
 	oAuthToken   *reddit_oauth2.OAuthToken
 	request      *http.Request
@@ -54,36 +55,16 @@ type sourceImage struct {
 	Height int    `json:"height"`
 }
 
-func (lr *ListingRequest) setListingsConfig(configMan config.ConfigManager) error {
-	listingsConf, err := configMan.GetMultiConfig([]string{
-		"reddit_grant_type_header",
-		"reddit_device_id_header",
-		"reddit_api_endpoint",
-		"reddit_content_type_header",
-		"platform",
-		"application_name",
-		"version",
-		"subreddit",
-		"subreddit_search_type",
-		"query_batch_size",
-	})
-	if err != nil {
-		return err
-	}
-	lr.listingsConf = listingsConf
-	return err
-}
-
 func (lr *ListingRequest) getRequestBody() string {
 	body := url.Values{}
-	body.Set("grant_type", lr.listingsConf["reddit_grant_type_header"])
-	body.Set("device_id", lr.listingsConf["reddit_device_id_header"])
+	body.Set("grant_type", lr.conf.RedditGrantTypeHeader)
+	body.Set("device_id", lr.conf.RedditDeviceIdHeader)
 	return body.Encode()
 }
 
 func (lr *ListingRequest) setRequestHeaders(ctx context.Context, req *http.Request) error {
-	req.Header.Add("User-Agent", lr.listingsConf["platform"]+":"+lr.listingsConf["application_name"]+":"+lr.listingsConf["version"])
-	req.Header.Add("Content-Type", lr.listingsConf["reddit_content_type_header"])
+	req.Header.Add("User-Agent", lr.conf.Platform+":"+lr.conf.ApplicationName+":"+lr.conf.Version)
+	req.Header.Add("Content-Type", lr.conf.RedditContentTypeHeader)
 	oAuthToken, err := reddit_oauth2.FromContext(ctx)
 	if err != nil {
 		return err
@@ -94,7 +75,7 @@ func (lr *ListingRequest) setRequestHeaders(ctx context.Context, req *http.Reque
 
 func (lr *ListingRequest) setRequestQueryParams(req *http.Request) {
 	q := req.URL.Query()
-	q.Add("limit", lr.listingsConf["query_batch_size"])
+	q.Add("limit", strconv.Itoa(lr.conf.QueryBatchSize))
 	if lr.before != "" {
 		q.Add("after", lr.before)
 	}
@@ -109,7 +90,7 @@ func (lr *ListingRequest) getRequest(ctx context.Context) (*http.Request, error)
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
-		lr.listingsConf["reddit_api_endpoint"]+"/r/"+lr.listingsConf["subreddit"]+"/"+lr.listingsConf["subreddit_search_type"],
+		lr.conf.RedditApiEndpoint+"/r/"+lr.conf.Subreddit+"/"+lr.conf.SubredditSearchType,
 		strings.NewReader(body),
 	)
 	if err != nil {
@@ -153,14 +134,11 @@ func (lr ListingRequest) DoRequest() (lres ListingResponse, err error) {
 func NewListingRequest(
 	ctx context.Context,
 	client *http.Client,
-	confMan config.ConfigManager,
+	conf config.Config,
 	before string,
 	after string,
 ) (lr ListingRequest, err error) {
-	err = lr.setListingsConfig(confMan)
-	if err != nil {
-		return lr, fmt.Errorf("failed to create listings request due to Config variables - %v", err)
-	}
+	lr.conf = conf
 	lr.client = client
 	lr.before = before
 	lr.after = after

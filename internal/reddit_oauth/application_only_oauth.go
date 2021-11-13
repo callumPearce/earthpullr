@@ -2,7 +2,7 @@ package reddit_oauth
 
 import (
 	"context"
-	"earthpullr/pkg/config"
+	"earthpullr/internal/config"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -15,15 +15,15 @@ const oAuthTokenKey int = 0
 
 type ApplicationOnlyOAuthRequest struct {
 	request           *http.Request
-	oauthConf         map[string]string
+	conf         	  config.Config
 	userAgent         string
 	client            *http.Client
 }
 
 func (oAuthRequest *ApplicationOnlyOAuthRequest) getPostRequestBody() string {
 	oAuthBody := url.Values{}
-	oAuthBody.Set("grant_type", oAuthRequest.oauthConf["reddit_grant_type_header"])
-	oAuthBody.Set("device_id", oAuthRequest.oauthConf["reddit_device_id_header"])
+	oAuthBody.Set("grant_type", oAuthRequest.conf.RedditGrantTypeHeader)
+	oAuthBody.Set("device_id", oAuthRequest.conf.RedditDeviceIdHeader)
 	return oAuthBody.Encode()
 }
 
@@ -32,12 +32,12 @@ func (oAuthRequest *ApplicationOnlyOAuthRequest) getPostRequest(ctx context.Cont
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		oAuthRequest.oauthConf["reddit_access_token_url"],
+		oAuthRequest.conf.RedditAccessTokenUrl,
 		strings.NewReader(oAuthBody),
 	)
-	req.Header.Add("Content-Type", oAuthRequest.oauthConf["reddit_content_type_header"])
+	req.Header.Add("Content-Type", oAuthRequest.conf.RedditContentTypeHeader)
 	req.Header.Add("User-Agent", oAuthRequest.userAgent)
-	req.SetBasicAuth(oAuthRequest.oauthConf["reddit_app_client_id"], "")
+	req.SetBasicAuth(oAuthRequest.conf.RedditAppClientId, "")
 	return req, err
 }
 
@@ -83,27 +83,10 @@ func (oAuthRequest ApplicationOnlyOAuthRequest) NewOAuthToken() (oAuthTokenPtr *
 	return &oAuthToken, err
 }
 
-func NewApplicationOnlyOAuthRequest(ctx context.Context, client *http.Client, configMan config.ConfigManager) (appOnlyOAuthReq ApplicationOnlyOAuthRequest, err error) {
-	errStrPrefix := "failed to create http request to retrieve application only oauth auth token: "
-	oauthConf, err := configMan.GetMultiConfig([]string{
-		"reddit_grant_type_header",
-		"reddit_access_token_url",
-		"reddit_device_id_header",
-		"reddit_content_type_header",
-		"reddit_app_client_id",
-		"platform",
-		"application_name",
-		"version",
-	})
-	if err != nil {
-		return appOnlyOAuthReq, fmt.Errorf(errStrPrefix+"%v", err)
-	}
-	if err != nil {
-		return appOnlyOAuthReq, fmt.Errorf(errStrPrefix+"%v", err)
-	}
+func NewApplicationOnlyOAuthRequest(ctx context.Context, client *http.Client, conf config.Config) (appOnlyOAuthReq ApplicationOnlyOAuthRequest, err error) {
 	appOnlyOAuthReq = ApplicationOnlyOAuthRequest{
-		oauthConf:         oauthConf,
-		userAgent:         oauthConf["platform"] + ":" + oauthConf["application_name"] + ":" + oauthConf["version"],
+		conf:         conf,
+		userAgent:         conf.Platform + ":" + conf.ApplicationName + ":" + conf.Version,
 		client:            client,
 	}
 	req, err := appOnlyOAuthReq.getPostRequest(ctx)

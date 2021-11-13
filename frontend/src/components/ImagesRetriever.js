@@ -103,6 +103,20 @@ class ImagesRetriever extends React.Component {
 		this.handleSubmit = this.handleSubmit.bind(this);
 		this.setDisplayFormState = this.setDisplayFormState.bind(this);
 		this.handleUserInput = this.handleUserInput.bind(this);
+		this.setInitialDownloadPath = this.setInitialDownloadPath.bind(this);
+
+		window.backend.BackgroundRetriever.GetUserDownloadPath().then(result =>
+			this.setInitialDownloadPath(result)
+		)
+			.catch(err =>
+				console.log(err)
+		)
+	}
+
+	setInitialDownloadPath(downloadPath) {
+		let newState = this.state;
+		newState.form.downloadPath.value = downloadPath
+		this.setState(newState);
 	}
 
 	setDisplayFormState(errMsg) {

@@ -3,27 +3,24 @@ package reddit_cli
 import (
 	"context"
 	"earthpullr/internal/reddit_oauth"
-	"earthpullr/pkg/config"
-	"earthpullr/pkg/file_readers"
-	"errors"
+	"earthpullr/internal/config"
+	"earthpullr/internal/user_settings"
 	"fmt"
 	"github.com/mitchellh/mapstructure"
 	"github.com/wailsapp/wails"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strconv"
 	"time"
 )
 
 type BackgroundRetriever struct {
 	logger                     *zap.Logger
-	configMan                  config.ConfigManager
-	maxAggregatedQueryTimeSecs int
+	conf                       config.Config
 	runtime                    *wails.Runtime
 	ctx                        context.Context
 	client                     *http.Client
+	userSettingsMan            user_settings.UserSettingsManager
 }
 
 type BackgroundsRequest struct {
@@ -33,27 +30,17 @@ type BackgroundsRequest struct {
 	DownloadPath   string
 }
 
-func NewBackgroundRetriever(ctx context.Context, logger *zap.Logger, cm config.ConfigManager) (*BackgroundRetriever, error) {
-	backgroundConf, err := cm.GetMultiConfig([]string{
-		"subreddit",
-		"subreddit_search_type",
-		"query_batch_size",
-		"max_aggregated_query_time_secs",
-	})
+func NewBackgroundRetriever(ctx context.Context, logger *zap.Logger, conf config.Config) (*BackgroundRetriever, error) {
+	userSettingsMan, err := user_settings.NewUserSettingsManager(conf.UserSettingsFname)
 	if err != nil {
-		return &BackgroundRetriever{}, err
-	}
-	maxAggregatedQueryTimeSecs, err := strconv.Atoi(backgroundConf["max_aggregated_query_time_secs"])
-	if err != nil {
-		err = fmt.Errorf("failed to parse config variable to integer: %w", err)
-		return &BackgroundRetriever{}, err
+		return nil, fmt.Errorf("failed to retrieve saved settings: %v", err)
 	}
 	retriever := &BackgroundRetriever{
 		logger:                     logger,
-		configMan:                  cm,
-		maxAggregatedQueryTimeSecs: maxAggregatedQueryTimeSecs,
+		conf:                       conf,
 		ctx:                        ctx,
 		client:                     &http.Client{Timeout: 10 * time.Second},
+		userSettingsMan: 				userSettingsMan,
 	}
 	return retriever, nil
 }
@@ -61,6 +48,11 @@ func NewBackgroundRetriever(ctx context.Context, logger *zap.Logger, cm config.C
 func (br *BackgroundRetriever) WailsInit(runtime *wails.Runtime) error {
 	br.runtime = runtime
 	return nil
+}
+
+func (br *BackgroundRetriever) GetUserDownloadPath() string {
+	br.logger.Debug("Retrieved download path: " + br.userSettingsMan.Settings.DownloadPath)
+	return br.userSettingsMan.Settings.DownloadPath
 }
 
 func (br *BackgroundRetriever) GetBackgrounds(request map[string]interface{}) (string, error) {
@@ -83,64 +75,27 @@ func (br *BackgroundRetriever) GetBackgrounds(request map[string]interface{}) (s
 	if err != nil {
 		return "Error", fmt.Errorf("failed to get new backgrounds: %v", err)
 	}
-	existingBackgrounds := br.getExistingBackgroundsMap(brRequest.DownloadPath)
+	existingBackgrounds := NewExistingBackgrounds(brRequest.DownloadPath, br.conf.ExistingImagesFilename, br.logger)
 	err = br.getBackgroundsWithBatching(brRequest, existingBackgrounds)
 	if err != nil {
 		return "Error", err
 	}
+	err = br.userSettingsMan.SaveNewUserSettings(brRequest.DownloadPath)
+	if err != nil {
+		br.logger.Error("Failed to save user settings", zap.Error(err))
+		return "Error", fmt.Errorf("failed to save user settings")
+	}
 	return "Success", nil
 }
 
-func (br *BackgroundRetriever) getExistingBackgroundPath(downloadPath string) (string, error){
-	existingImagesFname, err := br.configMan.GetConfig("existing_images_filename")
-	if err != nil {
-		return "", fmt.Errorf("failed to build path to existing images: %v", err)
-	}
-	existingBackgroundFpath := filepath.Join(downloadPath, existingImagesFname)
-	return existingBackgroundFpath, nil
-}
-
-func (br *BackgroundRetriever) getExistingBackgroundsMap(downloadPath string) *map[string]string {
-	existingBackgrounds := map[string]string{}
-	existingBackgroundFpath, err := br.getExistingBackgroundPath(downloadPath)
-	if err != nil {
-		br.logger.Error(fmt.Sprintf("%v", err))
-		return &existingBackgrounds
-	}
-
-	if _, err := os.Stat(existingBackgroundFpath); errors.Is(err, os.ErrNotExist) {
-		// Existing backgrounds file doesn't exist, just return an empty map
-		return &existingBackgrounds
-	}
-
-	existingBackgroundsJson, err := file_readers.NewFlatJsonFile(existingBackgroundFpath)
-	if err != nil {
-		br.logger.Error("failed to read existing images json file", zap.Error(err))
-		return &existingBackgrounds
-	}
-
-	existingBackgrounds = existingBackgroundsJson.Data
-	return &existingBackgrounds
-}
-
-func (br *BackgroundRetriever) saveExistingBackgrounds(downloadPath string, existingBackgrounds *map[string]string) error {
-	existingBackgroundFpath, err := br.getExistingBackgroundPath(downloadPath)
-	if err != nil {
-		return err
-	}
-	err = file_readers.SaveMapAsJson(*existingBackgrounds, existingBackgroundFpath)
-	br.logger.Info(fmt.Sprintf("saved existing backgrounds file to '%s'", existingBackgroundFpath))
-	return err
-}
-
-func (br *BackgroundRetriever) getBackgroundsWithBatching(brRequest BackgroundsRequest, existingBackgrounds *map[string]string) error {
+func (br *BackgroundRetriever) getBackgroundsWithBatching(brRequest BackgroundsRequest, existingBackgrounds *ExistingBackgrounds) error {
 	savedImages := 0
 	afterUID := ""
 	for savedImages < brRequest.BackgroundsCount {
 		listingRequest, err := NewListingRequest(
 			br.ctx,
 			br.client,
-			br.configMan,
+			br.conf,
 			"",
 			afterUID,
 		)
@@ -161,11 +116,11 @@ func (br *BackgroundRetriever) getBackgroundsWithBatching(brRequest BackgroundsR
 		imagesRetriever.SaveImages(brRequest.DownloadPath, br.runtime, existingBackgrounds)
 		savedImages += imagesRetriever.imageCount
 	}
-	return br.saveExistingBackgrounds(brRequest.DownloadPath, existingBackgrounds)
+	return existingBackgrounds.SaveExistingBackgrounds()
 }
 
 func (br *BackgroundRetriever) addOAuthTokenToCtx() error {
-	redditOauth, err := reddit_oauth.NewApplicationOnlyOAuthRequest(br.ctx, br.client, br.configMan)
+	redditOauth, err := reddit_oauth.NewApplicationOnlyOAuthRequest(br.ctx, br.client, br.conf)
 	if err != nil {
 		return fmt.Errorf("failed to build request to retrieve oauth Token from reddit: %v", err)
 	}

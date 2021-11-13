@@ -62,7 +62,7 @@ func (retriever ListingsImagesRetriever) saveResponseToFile(filePath string, res
 	return nil
 }
 
-func (retriever ListingsImagesRetriever) SaveImages(directoryPath string, runtime *wails.Runtime, existingBackgrounds *map[string]string) error {
+func (retriever ListingsImagesRetriever) SaveImages(directoryPath string, runtime *wails.Runtime, existingBackgrounds *ExistingBackgrounds) error {
 	for image, request := range retriever.requests {
 		fileName, err := image.getImageName()
 		if err != nil {
@@ -79,7 +79,7 @@ func (retriever ListingsImagesRetriever) SaveImages(directoryPath string, runtim
 			return err
 		}
 		retriever.logger.Info(fmt.Sprintf("Successfully saved image to '%s'", filePath))
-		(*existingBackgrounds)[fileName] = "s"
+		existingBackgrounds.AddBackground(fileName)
 		runtime.Events.Emit("image_saved", 1)
 	}
 	return nil
@@ -126,19 +126,19 @@ func imageFitsSpecifiedResolution(logger *zap.Logger, image imageData, width int
 	return valid
 }
 
-func imageHasBeenDownloaded(logger *zap.Logger, image imageData, existingImages *map[string]string) (exists bool) {
+func imageHasBeenDownloaded(logger *zap.Logger, image imageData, existingBackgrounds *ExistingBackgrounds) (exists bool) {
 	fname, err := image.getImageName()
 	if err != nil {
 		return false
 	}
-	if _, ok := (*existingImages)[fname]; ok {
-		logger.Debug(fmt.Sprintf("Image '%s' already exists in the download directory", fname, ))
+	if existingBackgrounds.HasBackground(fname) {
+		logger.Debug(fmt.Sprintf("Image '%s' already exists in the download directory", fname))
 		return true
 	}
 	return false
 }
 
-func NewImagesRetriever(logger *zap.Logger, ctx context.Context, lres ListingResponse, client *http.Client, maxImages int, width int, height int, existingImages *map[string]string) (imagesRetriever ListingsImagesRetriever, err error) {
+func NewImagesRetriever(logger *zap.Logger, ctx context.Context, lres ListingResponse, client *http.Client, maxImages int, width int, height int, existingImages *ExistingBackgrounds) (imagesRetriever ListingsImagesRetriever, err error) {
 	var images []imageData
 
 	if width <= 0 || width > MAX_RES || height <= 0 || height > MAX_RES {

@@ -3,8 +3,7 @@ package main
 import (
 	"context"
 	"earthpullr/internal/reddit_cli"
-	"earthpullr/pkg/config"
-	"earthpullr/pkg/file_readers"
+	"earthpullr/internal/config"
 	"earthpullr/pkg/log"
 	_ "embed"
 	"github.com/kbinani/screenshot"
@@ -24,9 +23,9 @@ func main() {
 	logger := log.New()
 	zap.ReplaceGlobals(logger)
 
-	configMan := getConfigManager(logger, "config.json")
+	conf := getConfig(logger, "")
 	ctx := context.Background()
-	retriever, err := reddit_cli.NewBackgroundRetriever(ctx, logger, configMan)
+	retriever, err := reddit_cli.NewBackgroundRetriever(ctx, logger, conf)
 	if err != nil {
 		logger.Fatal("Failed to create background retriever", zap.Error(err))
 		os.Exit(1)
@@ -48,14 +47,11 @@ func main() {
 	app.Run()
 }
 
-func getConfigManager(logger *zap.Logger, jsonFilePath string) config.ConfigManager {
-	flatJsonConfig, err := file_readers.NewFlatJsonFile(jsonFilePath)
+func getConfig(logger *zap.Logger, jsonFilePath string) config.Config {
+	conf, err := config.NewConfig(jsonFilePath)
 	if err != nil {
-		logger.Fatal("Failed to create Config Manager", zap.Error(err))
+		logger.Fatal("Failed to read config file, shutting down.", zap.Error(err))
 		os.Exit(1)
 	}
-	configMan := config.FlatJsonFileConfigManagerAdaptor{
-		FlatJsonFile: flatJsonConfig,
-	}
-	return configMan
+	return conf
 }
