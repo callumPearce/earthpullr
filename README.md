@@ -3,7 +3,7 @@
 earthpullr is a small desktop application which fetches images from https://www.reddit.com/r/EarthPorn/
 which fit your desktop background perfectly! 
 
-![earthpullr_ui](res/ui_example.png)
+<img src="res/ui_example.png" alt="earthpullr_ui" style="width:400px;"/>
 
 ## How it works
 Just fill in the full directory path to where you want to download the images to, the width and height of your screen 
