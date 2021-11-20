@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"earthpullr/internal/reddit_cli"
 	"earthpullr/internal/config"
+	"earthpullr/internal/reddit_cli"
 	"earthpullr/pkg/log"
 	_ "embed"
 	"github.com/kbinani/screenshot"
@@ -38,7 +38,7 @@ func main() {
 	app := wails.CreateApp(&wails.AppConfig{
 		MaxWidth:  width,
 		MaxHeight: height,
-		Title:  "earthpullr",
+		Title:  "earthpullr " + conf.Version,
 		JS:     js,
 		CSS:    css,
 		Colour: "#131313",

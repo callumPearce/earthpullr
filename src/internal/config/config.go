@@ -40,7 +40,7 @@ func NewDefaultConfig() Config {
 		RedditDeviceIdHeader: "DO_NOT_TRACK_THIS_DEVICE",
 		RedditContentTypeHeader: "application/x-www-form-urlencoded",
 		RedditApiEndpoint: "https://oauth.reddit.com",
-		Version: "v0.0.1",
+		Version: "v1.0.0",
 		Platform: "macOS",
 		ApplicationName: "earthpullr",
 		Subreddit: "earthporn",

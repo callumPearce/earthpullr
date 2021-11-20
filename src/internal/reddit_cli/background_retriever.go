@@ -2,8 +2,8 @@ package reddit_cli
 
 import (
 	"context"
-	"earthpullr/internal/reddit_oauth"
 	"earthpullr/internal/config"
+	"earthpullr/internal/reddit_oauth"
 	"earthpullr/internal/user_settings"
 	"fmt"
 	"github.com/mitchellh/mapstructure"
