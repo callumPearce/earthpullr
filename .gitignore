@@ -6,4 +6,4 @@ images/
 .DS_Store
 main
 .idea/*
-build/*
+src/build/*

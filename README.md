@@ -15,8 +15,9 @@ The latest version of earthpullr can be downloaded below
 
 | Operating System | Download |
 |------------------|----------|
-| MacOS/amd64            |   [v1.0.0]()       |
-| Windows/amd64          |   [v1.0.0]()       |
+| MacOS/amd64            |   [v1.0.0](build/1.0.0/macOS/earthpullr.dmg)       |
+| Windows/amd64          |   Coming soon       |
+| Linux/amd64            |   Coming soon       |
 
 ## Contribute
 earthpullr is open for any contributions. If you want to contribute but are not sure what to add it's worth taking
