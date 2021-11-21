@@ -1,7 +1,7 @@
 # earthpullr
 
 earthpullr is a small desktop application which fetches images from https://www.reddit.com/r/EarthPorn/
-which fit your desktop background perfectly! 
+which fit your desktop background perfectly for MacOS! 
 
 <img src="res/ui_example.png" alt="earthpullr_ui" style="width:400px;"/>
 
@@ -11,13 +11,7 @@ will be automatically detected, then state how many images you wish to download 
 then crawl through reddit/r/EarthPorn to find images which match the specification and download them to this directory.
 
 ## Download
-The latest version of earthpullr can be downloaded below
-
-| Operating System | Download |
-|------------------|----------|
-| MacOS/amd64            |   [v1.0.0](build/1.0.0/macOS/earthpullr.dmg)       |
-| Windows/amd64          |   Coming soon       |
-| Linux/amd64            |   Coming soon       |
+The latest version of earthpullr can be downloaded below here: [v1.0.0](build/1.0.0/macOS/earthpullr.dmg)
 
 ## Contribute
 earthpullr is open for any contributions. If you want to contribute but are not sure what to add it's worth taking

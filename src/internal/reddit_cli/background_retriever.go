@@ -88,6 +88,10 @@ func (br *BackgroundRetriever) GetBackgrounds(request map[string]interface{}) (s
 	return "Success", nil
 }
 
+//func (br *BackgroundRetriever) SetNextBackground() (string, error) {
+//
+//}
+
 func (br *BackgroundRetriever) getBackgroundsWithBatching(brRequest BackgroundsRequest, existingBackgrounds *ExistingBackgrounds) error {
 	savedImages := 0
 	afterUID := ""

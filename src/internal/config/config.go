@@ -47,7 +47,7 @@ func NewDefaultConfig() Config {
 		SubredditSearchType: "hot",
 		QueryBatchSize: 100,
 		MaxAggregatedQueryTimeSecs: 30,
-		ExistingImagesFilename: "earthpullr_existing_images.json",
+		ExistingImagesFilename: ".earthpullr_existing_images.json",
 		RedditAppClientId: "3gMaLS0rRxDTdEWErlrTEg",
 		UserSettingsFname: "earthpullr_user_settings.json",
 	}
